@@ -154,7 +154,7 @@
             position: relative;
         }
 
-        input[type="text"], input[type="number"] {
+        input[type="text"], input[type="number"], select {
             width: 100%;
             padding: 12px 16px;
             border: 1px solid #e0e0e0;
@@ -178,12 +178,34 @@
             flex-shrink: 0;
         }
 
-        /* Lists */
+        .btn-secondary {
+            background-color: var(--accent-light);
+            color: var(--accent-color);
+            border: none;
+            padding: 10px 14px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        /* Lists & Categories */
         .section-title {
             font-size: 16px;
             font-weight: 700;
             margin-bottom: 12px;
             color: var(--accent-color);
+        }
+
+        .category-header {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--accent-color);
+            background-color: var(--accent-light);
+            padding: 6px 12px;
+            border-radius: 8px;
+            margin: 12px 0 6px 0;
+            display: inline-block;
         }
 
         .item-list {
@@ -238,10 +260,17 @@
             padding: 10px;
             cursor: pointer;
             border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
         }
 
         .suggestion-item:hover {
             background-color: var(--accent-light);
+        }
+
+        .suggestion-cat {
+            font-size: 11px;
+            color: var(--text-muted);
         }
 
         /* Bottom Navigation */
@@ -329,21 +358,39 @@
 
     <!-- בלשונית: רשימת קניות -->
     <div id="shopping-tab" class="tab-content">
+        <!-- ניהול רשימות שמורות -->
+        <div class="card">
+            <div class="section-title">רשימות שמורות באחסון</div>
+            <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+                <input type="text" id="template-name-input" placeholder="שם הרשימה (למשל: קנייה שבועית)">
+                <button class="btn-secondary" onclick="saveCurrentListAsTemplate()">שמור סל</button>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <select id="saved-templates-select">
+                    <option value="">-- בחר רשימה טעונה --</option>
+                </select>
+                <button class="btn-secondary" onclick="loadSelectedTemplate()">טעון</button>
+                <button class="btn-secondary" style="color: #e74c3c;" onclick="deleteSelectedTemplate()">מחק</button>
+            </div>
+        </div>
+
+        <!-- הוספת מוצר -->
         <div class="card">
             <div class="section-title">הוספת מוצר לסל</div>
             <div class="add-box">
                 <div style="flex-grow: 1; position: relative;">
-                    <input type="text" id="product-input" placeholder="הקלד שם מוצר (למשל: חלב)..." oninput="onProductInput()" autocomplete="off">
+                    <input type="text" id="product-input" placeholder="הקלד שם מוצר..." oninput="onProductInput()" autocomplete="off">
                     <div id="suggestions" class="suggestions-box" style="display: none;"></div>
                 </div>
-                <input type="number" id="quantity-input" value="1" min="1" style="width: 70px; text-align: center;">
+                <input type="number" id="quantity-input" value="1" min="1" style="width: 65px; text-align: center;">
                 <button class="btn-add" onclick="addShoppingItem()">+</button>
             </div>
         </div>
 
+        <!-- הצגת הרשימה לפי קטגוריות -->
         <div class="card">
-            <div class="section-title">רשימת קניות</div>
-            <ul class="item-list" id="shopping-list"></ul>
+            <div class="section-title">רשימת קניות נוכחית</div>
+            <div id="shopping-list-grouped"></div>
         </div>
     </div>
 </div>
@@ -378,33 +425,103 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // Supermarket database
-    const supermarketProducts = [
-        "חלב 3%", "חלב 1%", "חלב שיבולת שועל", "חלב שקדים", "חלב סויה", "חלב ללא לקטוז",
-        "חמאה", "שמנת חמוצה", "שמנת מתוקה", "גבינה צהובה", "גבינה לבנה 5%", "קוטג'",
-        "גבינת בולגרית", "גבינת פטה", "גבינת נפוליאון", "מעדן יולו", "מילקי", "יוגורט דנונה",
-        "לחם פרוס", "לחם מחמצת", "לחם כוסמין", "פיתות", "לחמניות", "חלה", "טורטיות",
-        "ביצים L", "ביצים XL", "עגבניות", "מלפפונים", "בצל צהוב", "בצל ירוק", "בצל סגול",
-        "תפוחי אדמה", "גזר", "פלפל אדום", "פלפל צהוב", "קישואים", "חצילים", "שום",
-        "חסה", "כוסברה", "פטרוזיליה", "נענע", "תפוחי עץ", "בננות", "ענבים", "אבטיח",
-        "לימון", "תפוזים", "חזה עוף", "כרעיים עוף", "בשר טחון", "סטייק אנטריקוט",
-        "דג סלמון טרי", "טונה מקופסה", "אורז פרסי", "אורז בסמטי", "פסטה פוזילי",
-        "ספגטי", "פתיתים", "קוסקוס", "שמן זית", "שמן קנולה", "מלח", "פלפל שחור",
-        "סוכר", "קפה שחור", "קפה נמס", "תה קמומיל", "רסק עגבניות", "קאטשופ", "מיונז",
-        "חרדל", "טחינה גולמית", "חומוס", "סבון כלים", "טבליות למדיח", "נייר טואלט",
-        "מגבוני ניקוי", "אבקת כביסה", "מרכך כביסה", "שקיות אשפה"
+    // מאגר מוצרים מסווג לפי קטגוריות
+    const supermarketDb = [
+        // מוצרי חלב וביצים
+        { name: "חלב 3%", category: "🥛 מוצרי חלב וביצים" },
+        { name: "חלב 1%", category: "🥛 מוצרי חלב וביצים" },
+        { name: "חלב שיבולת שועל", category: "🥛 מוצרי חלב וביצים" },
+        { name: "חלב שקדים", category: "🥛 מוצרי חלב וביצים" },
+        { name: "חמאה", category: "🥛 מוצרי חלב וביצים" },
+        { name: "שמנת חמוצה", category: "🥛 מוצרי חלב וביצים" },
+        { name: "שמנת מתוקה", category: "🥛 מוצרי חלב וביצים" },
+        { name: "גבינה צהובה", category: "🥛 מוצרי חלב וביצים" },
+        { name: "גבינה לבנה 5%", category: "🥛 מוצרי חלב וביצים" },
+        { name: "קוטג'", category: "🥛 מוצרי חלב וביצים" },
+        { name: "גבינה בולגרית", category: "🥛 מוצרי חלב וביצים" },
+        { name: "מעדן יולו", category: "🥛 מוצרי חלב וביצים" },
+        { name: "מילקי", category: "🥛 מוצרי חלב וביצים" },
+        { name: "יוגורט דנונה", category: "🥛 מוצרי חלב וביצים" },
+        { name: "ביצים L", category: "🥛 מוצרי חלב וביצים" },
+        { name: "ביצים XL", category: "🥛 מוצרי חלב וביצים" },
+
+        // ירקות ופירות
+        { name: "עגבניות", category: "🥦 ירקות ופירות" },
+        { name: "מלפפונים", category: "🥦 ירקות ופירות" },
+        { name: "בצל צהוב", category: "🥦 ירקות ופירות" },
+        { name: "בצל ירוק", category: "🥦 ירקות ופירות" },
+        { name: "בצל סגול", category: "🥦 ירקות ופירות" },
+        { name: "תפוחי אדמה", category: "🥦 ירקות ופירות" },
+        { name: "גזר", category: "🥦 ירקות ופירות" },
+        { name: "פלפל אדום", category: "🥦 ירקות ופירות" },
+        { name: "קישואים", category: "🥦 ירקות ופירות" },
+        { name: "חצילים", category: "🥦 ירקות ופירות" },
+        { name: "שום", category: "🥦 ירקות ופירות" },
+        { name: "חסה", category: "🥦 ירקות ופירות" },
+        { name: "פטרוזיליה", category: "🥦 ירקות ופירות" },
+        { name: "תפוחי עץ", category: "🥦 ירקות ופירות" },
+        { name: "בננות", category: "🥦 ירקות ופירות" },
+        { name: "לימון", category: "🥦 ירקות ופירות" },
+
+        // לחם ומאפים
+        { name: "לחם פרוס", category: "🍞 לחם ומאפים" },
+        { name: "לחם מחמצת", category: "🍞 לחם ומאפים" },
+        { name: "לחם כוסמין", category: "🍞 לחם ומאפים" },
+        { name: "פיתות", category: "🍞 לחם ומאפים" },
+        { name: "לחמניות", category: "🍞 לחם ומאפים" },
+        { name: "חלה", category: "🍞 לחם ומאפים" },
+        { name: "טורטיות", category: "🍞 לחם ומאפים" },
+
+        // בשר, עוף ודגים
+        { name: "חזה עוף", category: "🥩 בשר, עוף ודגים" },
+        { name: "כרעיים עוף", category: "🥩 בשר, עוף ודגים" },
+        { name: "בשר טחון", category: "🥩 בשר, עוף ודגים" },
+        { name: "סטייק אנטריקוט", category: "🥩 בשר, עוף ודגים" },
+        { name: "דג סלמון טרי", category: "🥩 בשר, עוף ודגים" },
+        { name: "טונה מקופסה", category: "🥩 בשר, עוף ודגים" },
+
+        // מזווה ויבשים
+        { name: "אורז פרסי", category: "🥫 מזווה ויבשים" },
+        { name: "אורז בסמטי", category: "🥫 מזווה ויבשים" },
+        { name: "פסטה פוזילי", category: "🥫 מזווה ויבשים" },
+        { name: "ספגטי", category: "🥫 מזווה ויבשים" },
+        { name: "פתיתים", category: "🥫 מזווה ויבשים" },
+        { name: "שמן זית", category: "🥫 מזווה ויבשים" },
+        { name: "שמן קנולה", category: "🥫 מזווה ויבשים" },
+        { name: "מלח", category: "🥫 מזווה ויבשים" },
+        { name: "פלפל שחור", category: "🥫 מזווה ויבשים" },
+        { name: "סוכר", category: "🥫 מזווה ויבשים" },
+        { name: "קפה שחור", category: "🥫 מזווה ויבשים" },
+        { name: "קפה נמס", category: "🥫 מזווה ויבשים" },
+        { name: "רסק עגבניות", category: "🥫 מזווה ויבשים" },
+        { name: "קאטשופ", category: "🥫 מזווה ויבשים" },
+
+        // ניקוי ובית
+        { name: "סבון כלים", category: "🧼 ניקוי ובית" },
+        { name: "טבליות למדיח", category: "🧼 ניקוי ובית" },
+        { name: "נייר טואלט", category: "🧼 ניקוי ובית" },
+        { name: "מגבוני ניקוי", category: "🧼 ניקוי ובית" },
+        { name: "אבקת כביסה", category: "🧼 ניקוי ובית" },
+        { name: "מרכך כביסה", category: "🧼 ניקוי ובית" },
+        { name: "שקיות אשפה", category: "🧼 ניקוי ובית" }
     ];
 
     let currentDate = new Date();
     let selectedDateStr = formatDateKey(new Date());
     let eventsData = [];
     let shoppingData = [];
+    let templatesData = [];
 
     function formatDateKey(date) {
         const y = date.getFullYear();
         const m = String(date.getMonth() + 1).padStart(2, '0');
         const d = String(date.getDate()).padStart(2, '0');
         return `${y}-${m}-${d}`;
+    }
+
+    function detectCategory(productName) {
+        const match = supermarketDb.find(p => p.name === productName);
+        return match ? match.category : "📦 כללי / אחר";
     }
 
     // Realtime listeners for Firestore
@@ -417,7 +534,13 @@
     const shoppingQuery = query(collection(db, "shopping"));
     onSnapshot(shoppingQuery, (snapshot) => {
         shoppingData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        renderShoppingList();
+        renderShoppingListGrouped();
+    });
+
+    const templatesQuery = query(collection(db, "shopping_templates"));
+    onSnapshot(templatesQuery, (snapshot) => {
+        templatesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        renderTemplatesSelect();
     });
 
     // Calendar UI logic
@@ -510,7 +633,7 @@
         });
     }
 
-    // Shopping List Logic
+    // Autocomplete Logic
     window.onProductInput = function() {
         const inputVal = document.getElementById('product-input').value.trim();
         const suggestionsBox = document.getElementById('suggestions');
@@ -521,15 +644,15 @@
             return;
         }
 
-        const matches = supermarketProducts.filter(p => p.includes(inputVal));
+        const matches = supermarketDb.filter(p => p.name.includes(inputVal));
 
         if (matches.length > 0) {
             matches.forEach(match => {
                 const item = document.createElement('div');
                 item.className = 'suggestion-item';
-                item.innerText = match;
+                item.innerHTML = `<span>${match.name}</span><span class="suggestion-cat">${match.category}</span>`;
                 item.onclick = () => {
-                    document.getElementById('product-input').value = match;
+                    document.getElementById('product-input').value = match.name;
                     suggestionsBox.style.display = 'none';
                 };
                 suggestionsBox.appendChild(item);
@@ -549,9 +672,12 @@
 
         if (!name) return;
 
+        const category = detectCategory(name);
+
         await addDoc(collection(db, "shopping"), {
             name: name,
             quantity: qty,
+            category: category,
             createdAt: Date.now()
         });
 
@@ -564,23 +690,121 @@
         await deleteDoc(doc(db, "shopping", id));
     };
 
-    function renderShoppingList() {
-        const listContainer = document.getElementById('shopping-list');
-        listContainer.innerHTML = '';
+    function renderShoppingListGrouped() {
+        const container = document.getElementById('shopping-list-grouped');
+        container.innerHTML = '';
 
+        if (shoppingData.length === 0) {
+            container.innerHTML = '<div style="color: var(--text-muted); font-size: 14px;">רשימת הקניות ריקה.</div>';
+            return;
+        }
+
+        // Grouping items by category
+        const groups = {};
         shoppingData.forEach(item => {
-            const li = document.createElement('li');
-            li.className = 'item-row';
-            li.innerHTML = `
-                <div class="item-info">
-                    <strong>${item.name}</strong>
-                    <span class="item-date">כמות: ${item.quantity}</span>
-                </div>
-                <button class="delete-btn" onclick="deleteShoppingItem('${item.id}')">🗑️</button>
-            `;
-            listContainer.appendChild(li);
+            const cat = item.category || detectCategory(item.name);
+            if (!groups[cat]) groups[cat] = [];
+            groups[cat].push(item);
+        });
+
+        for (const [cat, items] of Object.entries(groups)) {
+            const catHeader = document.createElement('div');
+            catHeader.className = 'category-header';
+            catHeader.innerText = cat;
+            container.appendChild(catHeader);
+
+            const ul = document.createElement('ul');
+            ul.className = 'item-list';
+
+            items.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'item-row';
+                li.innerHTML = `
+                    <div class="item-info">
+                        <strong>${item.name}</strong>
+                        <span class="item-date">כמות: ${item.quantity}</span>
+                    </div>
+                    <button class="delete-btn" onclick="deleteShoppingItem('${item.id}')">🗑️</button>
+                `;
+                ul.appendChild(li);
+            });
+
+            container.appendChild(ul);
+        }
+    }
+
+    // Presets / Storage Logic
+    window.saveCurrentListAsTemplate = async function() {
+        const input = document.getElementById('template-name-input');
+        const name = input.value.trim();
+        
+        if (!name) {
+            alert('נא להזין שם עבור הרשימה השמורה');
+            return;
+        }
+
+        if (shoppingData.length === 0) {
+            alert('אין מוצרים בסל הנוכחי לשמירה');
+            return;
+        }
+
+        const itemsToSave = shoppingData.map(i => ({
+            name: i.name,
+            quantity: i.quantity,
+            category: i.category || detectCategory(i.name)
+        }));
+
+        await addDoc(collection(db, "shopping_templates"), {
+            templateName: name,
+            items: itemsToSave,
+            createdAt: Date.now()
+        });
+
+        input.value = '';
+        alert('הרשימה נשמרה בהצלחה!');
+    };
+
+    function renderTemplatesSelect() {
+        const select = document.getElementById('saved-templates-select');
+        select.innerHTML = '<option value="">-- בחר רשימה שמורה --</option>';
+
+        templatesData.forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t.id;
+            opt.innerText = `${t.templateName} (${t.items ? t.items.length : 0} מוצרים)`;
+            select.appendChild(opt);
         });
     }
+
+    window.loadSelectedTemplate = async function() {
+        const select = document.getElementById('saved-templates-select');
+        const templateId = select.value;
+
+        if (!templateId) return;
+
+        const template = templatesData.find(t => t.id === templateId);
+        if (!template || !template.items) return;
+
+        for (const item of template.items) {
+            await addDoc(collection(db, "shopping"), {
+                name: item.name,
+                quantity: item.quantity,
+                category: item.category || detectCategory(item.name),
+                createdAt: Date.now()
+            });
+        }
+    };
+
+    window.deleteSelectedTemplate = async function() {
+        const select = document.getElementById('saved-templates-select');
+        const templateId = select.value;
+
+        if (!templateId) return;
+
+        if (confirm('האם למחוק את הרשימה השמורה הזו?')) {
+            await deleteDoc(doc(db, "shopping_templates", templateId));
+        }
+    };
 
     window.switchTab = function(tabId, btn) {
         document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
