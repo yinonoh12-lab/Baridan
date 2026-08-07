@@ -149,29 +149,39 @@
         /* Input Controls */
         .add-box {
             display: flex;
+            flex-direction: column;
             gap: 10px;
             margin-top: 10px;
             position: relative;
         }
 
-        input[type="text"], input[type="number"], select {
+        .date-range-box {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        input[type="text"], input[type="number"], input[type="date"], select {
             width: 100%;
             padding: 12px 16px;
             border: 1px solid #e0e0e0;
             border-radius: 12px;
             background-color: var(--bg-color);
             outline: none;
-            font-size: 15px;
+            font-size: 14px;
         }
 
         .btn-add {
             background-color: var(--accent-color);
             color: white;
             border: none;
-            width: 48px;
+            padding: 12px 18px;
             border-radius: 12px;
             cursor: pointer;
-            font-size: 20px;
+            font-size: 16px;
+            font-weight: bold;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -220,11 +230,25 @@
             background-color: var(--bg-color);
             border-radius: 12px;
             margin-bottom: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .item-row.completed {
+            opacity: 0.5;
+            text-decoration: line-through;
         }
 
         .item-info {
             display: flex;
-            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .checkbox {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: var(--accent-color);
         }
 
         .item-date {
@@ -249,7 +273,7 @@
             background: white;
             border: 1px solid #ddd;
             border-radius: 12px;
-            max-height: 180px;
+            max-height: 200px;
             overflow-y: auto;
             z-index: 1000;
             box-shadow: 0 4px 10px rgba(0,0,0,0.1);
@@ -346,20 +370,33 @@
         <div class="card">
             <div class="section-title" id="selected-date-title">הוספת אירוע</div>
             <div class="add-box">
-                <input type="text" id="event-input" placeholder="למשל: יום הולדת, ארוחה...">
-                <button class="btn-add" onclick="addEvent()">+</button>
+                <input type="text" id="event-input" placeholder="שם האירוע (למשל: טיסה, יום הולדת)...">
+                <div class="date-range-box">
+                    <span>מתאריך:</span>
+                    <input type="date" id="event-start-date">
+                    <span>עד תאריך:</span>
+                    <input type="date" id="event-end-date">
+                </div>
+                <button class="btn-add" onclick="addEvent()">הוסף אירוע</button>
             </div>
         </div>
 
+        <!-- אירועים ביום שנבחר -->
         <div class="card">
-            <div class="section-title">אירועים קרובים</div>
-            <ul class="item-list" id="events-list"></ul>
+            <div class="section-title" id="events-for-day-title">אירועים ביום שנבחר</div>
+            <ul class="item-list" id="day-events-list"></ul>
+        </div>
+
+        <!-- כל האירועים מסודרים מהקרוב לרחוק -->
+        <div class="card">
+            <div class="section-title">כל האירועים הקרובים (מהקרוב לרחוק)</div>
+            <ul class="item-list" id="all-events-list"></ul>
         </div>
     </div>
 
     <!-- בלשונית: רשימת קניות -->
     <div id="shopping-tab" class="tab-content">
-        <!-- ניהול רשימות שמורות באחסון -->
+        <!-- ניהול רשימות שמורות -->
         <div class="card">
             <div class="section-title">רשימות שמורות באחסון</div>
             <div style="display: flex; gap: 8px; margin-bottom: 10px;">
@@ -379,18 +416,40 @@
         <div class="card">
             <div class="section-title">הוספת מוצר לסל</div>
             <div class="add-box">
-                <div style="flex-grow: 1; position: relative;">
-                    <input type="text" id="product-input" placeholder="הקלד שם מוצר..." oninput="onProductInput()" autocomplete="off">
-                    <div id="suggestions" class="suggestions-box" style="display: none;"></div>
+                <div style="display: flex; gap: 8px; position: relative;">
+                    <div style="flex-grow: 1; position: relative;">
+                        <input type="text" id="product-input" placeholder="הקלד שם מוצר..." oninput="onProductInput()" autocomplete="off">
+                        <div id="suggestions" class="suggestions-box" style="display: none;"></div>
+                    </div>
+                    <input type="number" id="quantity-input" value="1" min="1" style="width: 65px; text-align: center;">
                 </div>
-                <input type="number" id="quantity-input" value="1" min="1" style="width: 65px; text-align: center;">
-                <button class="btn-add" onclick="addShoppingItem()">+</button>
+
+                <!-- בחירת קטגוריה במידה והמוצר חדש -->
+                <div id="custom-category-box" style="display: none;">
+                    <label style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px; display: block;">מוצר חדש? בחר קטגוריה למאגר:</label>
+                    <select id="custom-category-select">
+                        <option value="🥛 מוצרי חלב וטבעונות">🥛 מוצרי חלב וטבעונות</option>
+                        <option value="🥦 ירקות ופירות">🥦 ירקות ופירות</option>
+                        <option value="🍞 לחם ומאפים">🍞 לחם ומאפים</option>
+                        <option value="🥩 בשר, עוף ודגים">🥩 בשר, עוף ודגים</option>
+                        <option value="🧊 קפואים">🧊 קפואים</option>
+                        <option value="🥫 מזווה ויבשים">🥫 מזווה ויבשים</option>
+                        <option value="🍫 חטיפים ומתוקים">🍫 חטיפים ומתוקים</option>
+                        <option value="🍷 שתייה חריפה ואלכוהול">🍷 שתייה חריפה ואלכוהול</option>
+                        <option value="🥤 שתייה קלה ומשקאות">🥤 שתייה קלה ומשקאות</option>
+                        <option value="🧼 ניקוי ובית">🧼 ניקוי ובית</option>
+                        <option value="🧴 פארם וטואלטיקה">🧴 פארם וטואלטיקה</option>
+                        <option value="📦 כללי / אחר">📦 כללי / אחר</option>
+                    </select>
+                </div>
+
+                <button class="btn-add" onclick="addShoppingItem()">הוסף לסל</button>
             </div>
         </div>
 
-        <!-- הצגת הרשימה לפי קטגוריות -->
+        <!-- הצגת הרשימה כצ'ק-ליסט -->
         <div class="card">
-            <div class="section-title">רשימת קניות נוכחית</div>
+            <div class="section-title">רשימת קניות (צ'ק-ליסט)</div>
             <div id="shopping-list-grouped"></div>
         </div>
     </div>
@@ -411,7 +470,7 @@
 <!-- Firebase SDK Modules -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, deleteDoc, doc, updateDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyD4Jk8Wr-kXiP9yE76vvFCiUbzw6ddQXSI",
@@ -426,352 +485,147 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // מאגר מורחב ומפורט של מוצרי סופר בישראל
-    const supermarketDb = [
-        // --- 🍫 חטיפים ומתוקים ---
+    // מאגר מובנה רחב
+    const builtInProducts = [
+        // --- 🧼 סנו, ניקוי, כביסה ובית ---
+        { name: "סנו ז'אוול אקונומיקה 4 ליטר", category: "🧼 ניקוי ובית" },
+        { name: "סנו ז'אוול ג'ל ניקוי", category: "🧼 ניקוי ובית" },
+        { name: "סנו פוליוויקס לרצפות", category: "🧼 ניקוי ובית" },
+        { name: "סנו אווקס לרצפות עץ/פרקט", category: "🧼 ניקוי ובית" },
+        { name: "סנו רהיטים ספריי לטיפוח", category: "🧼 ניקוי ובית" },
+        { name: "סנובון אסלה 5 פעולות", category: "🧼 ניקוי ובית" },
+        { name: "סנובון ג'ל לאסלה", category: "🧼 ניקוי ובית" },
+        { name: "סנו קלער לניקוי חלונות", category: "🧼 ניקוי ובית" },
+        { name: "סנו אנטי קאלק לאבנית", category: "🧼 ניקוי ובית" },
+        { name: "סנו ספארק נוזל כלים", category: "🧼 ניקוי ובית" },
+        { name: "סנו מקסימה מרכך כביסה", category: "🧼 ניקוי ובית" },
+        { name: "סנו מקסימה אבקת כביסה", category: "🧼 ניקוי ובית" },
+        { name: "סנו מקסימה ג'ל כביסה", category: "🧼 ניקוי ובית" },
+        { name: "סנו אויר מטהר אוויר", category: "🧼 ניקוי ובית" },
+        { name: "סנו פורטה מסיר שומנים", category: "🧼 ניקוי ובית" },
+        { name: "סנו מטליות לחות לרצפה", category: "🧼 ניקוי ובית" },
+        { name: "סנו מטליות לחות לחיטוי כללי", category: "🧼 ניקוי ובית" },
+        { name: "סנו K300 לקטילת חרקים", category: "🧼 ניקוי ובית" },
+        { name: "סנו K2000 לחרקים זוחלים", category: "🧼 ניקוי ובית" },
+        { name: "סבון כלים פיירי 650 מ\"ל", category: "🧼 ניקוי ובית" },
+        { name: "טבליות למדיח Finish All in 1", category: "🧼 ניקוי ובית" },
+        { name: "נייר טואלט שמורת טבע 30 גלילים", category: "🧼 ניקוי ובית" },
+        { name: "מגבות נייר למטבח מארז 6", category: "🧼 ניקוי ובית" },
+        { name: "שקיות אשפה ענקיות עם שרוך", category: "🧼 ניקוי ובית" },
+        { name: "ניילון נצמד עם חותך", category: "🧼 ניקוי ובית" },
+        { name: "נייר אפייה קלאסי", category: "🧼 ניקוי ובית" },
+        { name: "רדיד אלומיניום (נייר כסף)", category: "🧼 ניקוי ובית" },
+
+        // --- 🍫 חטיפים, מתוקים ועוגיות ---
         { name: "במבה 80 גרם", category: "🍫 חטיפים ומתוקים" },
+        { name: "במבה ממולאת נוטלה / קרם נוגט", category: "🍫 חטיפים ומתוקים" },
         { name: "ביסלי בצל", category: "🍫 חטיפים ומתוקים" },
         { name: "ביסלי ברביקיו", category: "🍫 חטיפים ומתוקים" },
         { name: "ביסלי גריל", category: "🍫 חטיפים ומתוקים" },
+        { name: "ביסלי פלאפל", category: "🍫 חטיפים ומתוקים" },
         { name: "תפוצ'יפס טבעי", category: "🍫 חטיפים ומתוקים" },
         { name: "תפוצ'יפס שמנת בצל", category: "🍫 חטיפים ומתוקים" },
+        { name: "תפוצ'יפס מקסיקני", category: "🍫 חטיפים ומתוקים" },
         { name: "דוריטוס חמוץ חריף", category: "🍫 חטיפים ומתוקים" },
         { name: "דוריטוס נאצ'ו", category: "🍫 חטיפים ומתוקים" },
+        { name: "פרינגלס קלאסי", category: "🍫 חטיפים ומתוקים" },
+        { name: "פרינגלס שמנת בצל", category: "🍫 חטיפים ומתוקים" },
         { name: "פופקורן למיקרוגל", category: "🍫 חטיפים ומתוקים" },
         { name: "אפרופו", category: "🍫 חטיפים ומתוקים" },
         { name: "בייגלה שמיניות", category: "🍫 חטיפים ומתוקים" },
         { name: "בייגלה שטוחים", category: "🍫 חטיפים ומתוקים" },
         { name: "מילקה שוקולד חלב", category: "🍫 חטיפים ומתוקים" },
         { name: "שוקולד פרה חלב", category: "🍫 חטיפים ומתוקים" },
-        { name: "שוקולד פרה מריר", category: "🍫 חטיפים ומתוקים" },
-        { name: "שוקולד פרה אגוזים", category: "🍫 חטיפים ומתוקים" },
         { name: "קינדר בואנו", category: "🍫 חטיפים ומתוקים" },
         { name: "קינדר ג'וי", category: "🍫 חטיפים ומתוקים" },
         { name: "נוטלה 350 גרם", category: "🍫 חטיפים ומתוקים" },
         { name: "ממרח השחר העולה", category: "🍫 חטיפים ומתוקים" },
-        { name: "חטיף אנרגיה Nature Valley", category: "🍫 חטיפים ומתוקים" },
-        { name: "חטיף חלבון Allin", category: "🍫 חטיפים ומתוקים" },
-        { name: "וופל לואקר שוקולד", category: "🍫 חטיפים ומתוקים" },
-        { name: "וופלים מן", category: "🍫 חטיפים ומתוקים" },
-        { name: "עוגיות עבאדי", category: "🍫 חטיפים ומתוקים" },
         { name: "עוגיות אוראו", category: "🍫 חטיפים ומתוקים" },
         { name: "עוגיות לוטוס", category: "🍫 חטיפים ומתוקים" },
-        { name: "סוכריות מנטוס", category: "🍫 חטיפים ומתוקים" },
-        { name: "סוכריות גומי", category: "🍫 חטיפים ומתוקים" },
-        { name: "מסטיק אורביט", category: "🍫 חטיפים ומתוקים" },
 
         // --- 🍷 שתייה חריפה ואלכוהול ---
         { name: "בירה גולדסטאר 6 יח'", category: "🍷 שתייה חריפה ואלכוהול" },
         { name: "בירה הייניקן 6 יח'", category: "🍷 שתייה חריפה ואלכוהול" },
         { name: "בירה קורונה 4 יח'", category: "🍷 שתייה חריפה ואלכוהול" },
-        { name: "בירה קרלסברג", category: "🍷 שתייה חריפה ואלכוהול" },
-        { name: "בירה טובורג", category: "🍷 שתייה חריפה ואלכוהול" },
-        { name: "בירה Stella Artois", category: "🍷 שתייה חריפה ואלכוהול" },
-        { name: "בירה מלכה אדמונית", category: "🍷 שתייה חריפה ואלכוהול" },
         { name: "וודקה פינלנדיה 1 ליטר", category: "🍷 שתייה חריפה ואלכוהול" },
         { name: "וודקה אבסולוט 1 ליטר", category: "🍷 שתייה חריפה ואלכוהול" },
         { name: "וודקה וואן גוך אקזוטי", category: "🍷 שתייה חריפה ואלכוהול" },
-        { name: "וודקה וואן גוך אספרסו", category: "🍷 שתייה חריפה ואלכוהול" },
         { name: "וויסקי ג'ק דניאלס 1 ליטר", category: "🍷 שתייה חריפה ואלכוהול" },
         { name: "וויסקי ג'וני ווקר בלאק לייבל", category: "🍷 שתייה חריפה ואלכוהול" },
-        { name: "וויסקי שיבאס ריגל 12", category: "🍷 שתייה חריפה ואלכוהול" },
-        { name: "וויסקי גלנפידיך 12", category: "🍷 שתייה חריפה ואלכוהול" },
         { name: "ערק איילות", category: "🍷 שתייה חריפה ואלכוהול" },
         { name: "ערק עלית 700 מ\"ל", category: "🍷 שתייה חריפה ואלכוהול" },
-        { name: "ג'ין גורדונס", category: "🍷 שתייה חריפה ואלכוהול" },
-        { name: "ג'ין טנקרי", category: "🍷 שתייה חריפה ואלכוהול" },
-        { name: "רום קפטן מורגן", category: "🍷 שתייה חריפה ואלכוהול" },
-        { name: "טקילה קוארבו גולד", category: "🍷 שתייה חריפה ואלכוהול" },
         { name: "יין אדום קברנה סוביניון הרי גליל", category: "🍷 שתייה חריפה ואלכוהול" },
-        { name: "יין אדום ירדן קברנה", category: "🍷 שתייה חריפה ואלכוהול" },
-        { name: "יין לבן שרדונה כרמל", category: "🍷 שתייה חריפה ואלכוהול" },
-        { name: "יין לבן גוורצטרמינר ירדן", category: "🍷 שתייה חריפה ואלכוהול" },
-        { name: "יין רוזה הר חרמון", category: "🍷 שתייה חריפה ואלכוהול" },
-        { name: "יין מבעבע קאווא", category: "🍷 שתייה חריפה ואלכוהול" },
-        { name: "פרוסקו Canti", category: "🍷 שתייה חריפה ואלכוהול" },
-        { name: "למברוסקו", category: "🍷 שתייה חריפה ואלכוהול" },
-        { name: "אפרול 1 ליטר", category: "🍷 שתייה חריפה ואלכוהול" },
-        { name: "קמפרי", category: "🍷 שתייה חריפה ואלכוהול" },
 
-        // --- 🥤 שתייה קלה ומשקאות ---
+        // --- 🥤 שתייה קלה ---
         { name: "קוקה קולה 1.5 ליטר", category: "🥤 שתייה קלה ומשקאות" },
         { name: "קוקה קולה זירו 1.5 ליטר", category: "🥤 שתייה קלה ומשקאות" },
         { name: "ספרייט 1.5 ליטר", category: "🥤 שתייה קלה ומשקאות" },
         { name: "ספרייט זירו 1.5 ליטר", category: "🥤 שתייה קלה ומשקאות" },
         { name: "פנטה תפוזים 1.5 ליטר", category: "🥤 שתייה קלה ומשקאות" },
         { name: "פיוז טי אפרסק 1.5 ליטר", category: "🥤 שתייה קלה ומשקאות" },
-        { name: "פיוז טי אפרסק זירו", category: "🥤 שתייה קלה ומשקאות" },
-        { name: "מזאר מאלטי שחורה", category: "🥤 שתייה קלה ומשקאות" },
         { name: "שישיית מים מינרליים נביעות", category: "🥤 שתייה קלה ומשקאות" },
         { name: "שישיית מים מינרליים מי עדן", category: "🥤 שתייה קלה ומשקאות" },
-        { name: "סודה טמפו 1.5 ליטר", category: "🥤 שתייה קלה ומשקאות" },
-        { name: "סודה סן פלגרינו", category: "🥤 שתייה קלה ומשקאות" },
-        { name: "מיץ תפוזים פרימור 1 ליטר", category: "🥤 שתייה קלה ומשקאות" },
-        { name: "מיץ אשכוליות פרימור", category: "🥤 שתייה קלה ומשקאות" },
-        { name: "מיץ ענבים טבעי", category: "🥤 שתייה קלה ומשקאות" },
-        { name: "משקה אנרגיה Red Bull", category: "🥤 שתייה קלה ומשקאות" },
-        { name: "משקה אנרגיה XL", category: "🥤 שתייה קלה ומשקאות" },
-        { name: "משקה אנרגיה Monster", category: "🥤 שתייה קלה ומשקאות" },
-        { name: "טוניק שוופס", category: "🥤 שתייה קלה ומשקאות" },
-        { name: "שוופס מים בטעמים אפרסק", category: "🥤 שתייה קלה ומשקאות" },
 
-        // --- 🥛 מוצרי חלב, ביצים וטבעונות ---
+        // --- 🥛 מוצרי חלב וטבעונות ---
         { name: "חלב 3% קרטון", category: "🥛 מוצרי חלב וטבעונות" },
         { name: "חלב 1% קרטון", category: "🥛 מוצרי חלב וטבעונות" },
         { name: "חלב ללא לקטוז", category: "🥛 מוצרי חלב וטבעונות" },
         { name: "חלב שיבולת שועל אלפרו", category: "🥛 מוצרי חלב וטבעונות" },
-        { name: "חלב שקדים אלפרו", category: "🥛 מוצרי חלב וטבעונות" },
-        { name: "חלב סויה אלפרו", category: "🥛 מוצרי חלב וטבעונות" },
         { name: "חמאה תנובה 100 גרם", category: "🥛 מוצרי חלב וטבעונות" },
-        { name: "שמנת חמוצה 15%", category: "🥛 מוצרי חלב וטבעונות" },
-        { name: "שמנת מתוקה לבישול 15%", category: "🥛 מוצרי חלב וטבעונות" },
-        { name: "שמנת מתוקה להקצפה 38%", category: "🥛 מוצרי חלב וטבעונות" },
         { name: "גבינה צהובה עמק 28%", category: "🥛 מוצרי חלב וטבעונות" },
-        { name: "גבינה צהובה נעם", category: "🥛 מוצרי חלב וטבעונות" },
         { name: "גבינה לבנה 5% תנובה", category: "🥛 מוצרי חלב וטבעונות" },
         { name: "קוטג' 5% תנובה", category: "🥛 מוצרי חלב וטבעונות" },
-        { name: "קוטג' 9%", category: "🥛 מוצרי חלב וטבעונות" },
-        { name: "גבינה בולגרית 5%", category: "🥛 מוצרי חלב וטבעונות" },
-        { name: "גבינת פטה עיזים", category: "🥛 מוצרי חלב וטבעונות" },
-        { name: "גבינת נפוליאון בטעם טבעי", category: "🥛 מוצרי חלב וטבעונות" },
-        { name: "גבינת פרמזן מגוררת", category: "🥛 מוצרי חלב וטבעונות" },
-        { name: "גבינת מוצרלה מגוררת", category: "🥛 מוצרי חלב וטבעונות" },
-        { name: "גבינת חלומי", category: "🥛 מוצרי חלב וטבעונות" },
-        { name: "גבינת שמנת 30%", category: "🥛 מוצרי חלב וטבעונות" },
-        { name: "יוגורט דנונה ביו", category: "🥛 מוצרי חלב וטבעונות" },
-        { name: "יוגורט GO חלבון 20g", category: "🥛 מוצרי חלב וטבעונות" },
-        { name: "יוגורט יווני Yoplait", category: "🥛 מוצרי חלב וטבעונות" },
-        { name: "מילקי שוקולד", category: "🥛 מוצרי חלב וטבעונות" },
-        { name: "מעדן יולו שוקולד חלב", category: "🥛 מוצרי חלב וטבעונות" },
-        { name: "מעדן גמדים", category: "🥛 מוצרי חלב וטבעונות" },
-        { name: "שוקו יוטבתה 1 ליטר", category: "🥛 מוצרי חלב וטבעונות" },
-        { name: "שוקו אישי", category: "🥛 מוצרי חלב וטבעונות" },
         { name: "ביצים L תבנית 12", category: "🥛 מוצרי חלב וטבעונות" },
         { name: "ביצים XL תבנית 12", category: "🥛 מוצרי חלב וטבעונות" },
-        { name: "ביצי חופש L", category: "🥛 מוצרי חלב וטבעונות" },
-        { name: "טופו טבעי קדימה", category: "🥛 מוצרי חלב וטבעונות" },
-        { name: "טופו במרינדה", category: "🥛 מוצרי חלב וטבעונות" },
 
-        // --- 🥦 ירקות, פירות ועשבי תיבול ---
+        // --- 🥦 ירקות ופירות ---
         { name: "עגבניות", category: "🥦 ירקות ופירות" },
         { name: "עגבניות שרי", category: "🥦 ירקות ופירות" },
         { name: "מלפפונים", category: "🥦 ירקות ופירות" },
         { name: "בצל צהוב", category: "🥦 ירקות ופירות" },
         { name: "בצל סגול", category: "🥦 ירקות ופירות" },
-        { name: "בצל ירוק", category: "🥦 ירקות ופירות" },
         { name: "תפוחי אדמה לבן", category: "🥦 ירקות ופירות" },
-        { name: "תפוחי אדמה אדום", category: "🥦 ירקות ופירות" },
         { name: "בטטה", category: "🥦 ירקות ופירות" },
         { name: "גזר ארוז", category: "🥦 ירקות ופירות" },
         { name: "פלפל אדום", category: "🥦 ירקות ופירות" },
-        { name: "פלפל צהוב", category: "🥦 ירקות ופירות" },
-        { name: "פלפל ירוק חריף", category: "🥦 ירקות ופירות" },
-        { name: "קישואים", category: "🥦 ירקות ופירות" },
-        { name: "חצילים", category: "🥦 ירקות ופירות" },
-        { name: "שום ראש", category: "🥦 ירקות ופירות" },
-        { name: "שום כתוש", category: "🥦 ירקות ופירות" },
-        { name: "חסה ערבית", category: "🥦 ירקות ופירות" },
-        { name: "חסה עגולה (אייסברג)", category: "🥦 ירקות ופירות" },
-        { name: "עלי בייבי סלט", category: "🥦 ירקות ופירות" },
-        { name: "תרד טרי", category: "🥦 ירקות ופירות" },
-        { name: "פטרוזיליה", category: "🥦 ירקות ופירות" },
-        { name: "כוסברה", category: "🥦 ירקות ופירות" },
-        { name: "נענע", category: "🥦 ירקות ופירות" },
-        { name: "שמיר", category: "🥦 ירקות ופירות" },
-        { name: "בזיליקום טרי", category: "🥦 ירקות ופירות" },
-        { name: "פטריות שמפיניון", category: "🥦 ירקות ופירות" },
-        { name: "פטריות פורטבלו", category: "🥦 ירקות ופירות" },
-        { name: "ברוקולי טרי", category: "🥦 ירקות ופירות" },
-        { name: "כרובית", category: "🥦 ירקות ופירות" },
-        { name: "כרוב לבן", category: "🥦 ירקות ופירות" },
-        { name: "כרוב אדום", category: "🥦 ירקות ופירות" },
         { name: "אבוקדו", category: "🥦 ירקות ופירות" },
-        { name: "תפוחי עץ חרמון", category: "🥦 ירקות ופירות" },
-        { name: "תפוחי עץ ירוק (גרני סמית')", category: "🥦 ירקות ופירות" },
         { name: "בננות", category: "🥦 ירקות ופירות" },
         { name: "לימון", category: "🥦 ירקות ופירות" },
-        { name: "תפוזים לסחיטה", category: "🥦 ירקות ופירות" },
-        { name: "אשכולית אדומה", category: "🥦 ירקות ופירות" },
-        { name: "קיווי", category: "🥦 ירקות ופירות" },
-        { name: "ענבים ירוקים", category: "🥦 ירקות ופירות" },
-        { name: "ענבים שחורים", category: "🥦 ירקות ופירות" },
-        { name: "אבטיח", category: "🥦 ירקות ופירות" },
-        { name: "מלון", category: "🥦 ירקות ופירות" },
-        { name: "תות שדה", category: "🥦 ירקות ופירות" },
-        { name: "אפרסק / שזף", category: "🥦 ירקות ופירות" },
 
         // --- 🍞 לחם, מאפים וסלטים ---
         { name: "לחם אחיד פרוס", category: "🍞 לחם ומאפים" },
         { name: "לחם מחמצת כפרי", category: "🍞 לחם ומאפים" },
-        { name: "לחם כוסמין 100%", category: "🍞 לחם ומאפים" },
-        { name: "לחם קל", category: "🍞 לחם ומאפים" },
         { name: "פיתות אריזה של 10", category: "🍞 לחם ומאפים" },
-        { name: "פיתות כוסמין", category: "🍞 לחם ומאפים" },
         { name: "לחמניות המבורגר 4 יח'", category: "🍞 לחם ומאפים" },
-        { name: "לחמניות נקניקיה", category: "🍞 לחם ומאפים" },
         { name: "חלה לשבת", category: "🍞 לחם ומאפים" },
-        { name: "חלת מתוקה", category: "🍞 לחם ומאפים" },
-        { name: "טורטיות מקסיקניות", category: "🍞 לחם ומאפים" },
-        { name: "פיתה דרוזית / לאפה", category: "🍞 לחם ומאפים" },
         { name: "חומוס אחלה 500 גרם", category: "🍞 לחם ומאפים" },
-        { name: "חומוס צבר", category: "🍞 לחם ומאפים" },
-        { name: "טחינה מוכנה", category: "🍞 לחם ומאפים" },
-        { name: "סלט חצילים בטחינה", category: "🍞 לחם ומאפים" },
-        { name: "סלט כרוב במיונז", category: "🍞 לחם ומאפים" },
-        { name: "סלט טורקי", category: "🍞 לחם ומאפים" },
-        { name: "מטבוחה", category: "🍞 לחם ומאפים" },
-        { name: "סלט ביצים", category: "🍞 לחם ומאפים" },
 
-        // --- 🥩 בשר, עוף, נקניקים ודגים ---
+        // --- 🥩 בשר, עוף ודגים ---
         { name: "חזה עוף טרי", category: "🥩 בשר, עוף ודגים" },
-        { name: "חזה עוף פרוס לשניצל", category: "🥩 בשר, עוף ודגים" },
         { name: "כרעיים עוף טרי", category: "🥩 בשר, עוף ודגים" },
-        { name: "פרגיות עוף", category: "🥩 בשר, עוף ודגים" },
-        { name: "כנפיים עוף", category: "🥩 בשר, עוף ודגים" },
-        { name: "עוף שלם טרי", category: "🥩 בשר, עוף ודגים" },
         { name: "בשר טחון טרי (בקר)", category: "🥩 בשר, עוף ודגים" },
         { name: "סטייק אנטריקוט טרי", category: "🥩 בשר, עוף ודגים" },
-        { name: "צלעות בקר (מספר 2)", category: "🥩 בשר, עוף ודגים" },
-        { name: "בשר צלי (מספר 5)", category: "🥩 בשר, עוף ודגים" },
-        { name: "קבב בקר מוכן", category: "🥩 בשר, עוף ודגים" },
-        { name: "המבורגר בקר מוכן", category: "🥩 בשר, עוף ודגים" },
-        { name: "נקניקיות הודו / עוף", category: "🥩 בשר, עוף ודגים" },
-        { name: "נקניקיות מרגז חריפות", category: "🥩 בשר, עוף ודגים" },
-        { name: "פסטרמה בדבש", category: "🥩 בשר, עוף ודגים" },
-        { name: "פסטרמה מעושנת", category: "🥩 בשר, עוף ודגים" },
-        { name: "סלמי איטלקי", category: "🥩 בשר, עוף ודגים" },
         { name: "פילה סלמון טרי", category: "🥩 בשר, עוף ודגים" },
-        { name: "פילה אמנון (מושט)", category: "🥩 בשר, עוף ודגים" },
-        { name: "דג דניס טרי", category: "🥩 בשר, עוף ודגים" },
         { name: "טונה בשמן מארז 4 יח'", category: "🥩 בשר, עוף ודגים" },
-        { name: "טונה במים מארז 4 יח'", category: "🥩 בשר, עוף ודגים" },
-        { name: "סלמון מעושן פרוס", category: "🥩 בשר, עוף ודגים" },
 
         // --- 🧊 קפואים ---
         { name: "שניצל מאמא עוף חזה עוף", category: "🧊 קפואים" },
         { name: "שניצל תירס טבעול", category: "🧊 קפואים" },
-        { name: "קציצות ירקות טבעול", category: "🧊 קפואים" },
-        { name: "צ'יפס קפוא לתנור / טיגון", category: "🧊 קפואים" },
-        { name: "צ'יפס זיגזג", category: "🧊 קפואים" },
+        { name: "צ'יפס קפוא לתנור", category: "🧊 קפואים" },
         { name: "פיצה קפואה מעדנות", category: "🧊 קפואים" },
-        { name: "מלוואח קפוא", category: "🧊 קפואים" },
-        { name: "ג'חנון קפוא", category: "🧊 קפואים" },
-        { name: "בצק עלים קפוא", category: "🧊 קפואים" },
-        { name: "בצק פילאס קפוא", category: "🧊 קפואים" },
-        { name: "בורקס גבינה קפוא", category: "🧊 קפואים" },
-        { name: "בורקס תפוח אדמה קפוא", category: "🧊 קפואים" },
-        { name: "אפונה ירוקה סנפרוסט", category: "🧊 קפואים" },
-        { name: "תירס קפוא סנפרוסט", category: "🧊 קפואים" },
-        { name: "לקט ירקות להקפצה סנפרוסט", category: "🧊 קפואים" },
-        { name: "שעועית ירוקה חתוכה סנפרוסט", category: "🧊 קפואים" },
-        { name: "פירות יער קפואים לשייק", category: "🧊 קפואים" },
-        { name: "מנגו קפוא לשייק", category: "🧊 קפואים" },
-        { name: "גלידה גולדה / בן & ג'ריס", category: "🧊 קפואים" },
-        { name: "ארטיק קרח לימון / דובדבן", category: "🧊 קפואים" },
 
         // --- 🥫 מזווה, שימורים ותבלינים ---
         { name: "אורז פרסי קלאסי 1 ק\"ג", category: "🥫 מזווה ויבשים" },
-        { name: "אורז בסמטי 1 ק\"ג", category: "🥫 מזווה ויבשים" },
-        { name: "אורז עגול לסושי", category: "🥫 מזווה ויבשים" },
-        { name: "אורז מלא", category: "🥫 מזווה ויבשים" },
-        { name: "פסטה פוזילי (בורג)", category: "🥫 מזווה ויבשים" },
         { name: "פסטה ספגטי מס' 5", category: "🥫 מזווה ויבשים" },
-        { name: "פסטה פנה (צינורות)", category: "🥫 מזווה ויבשים" },
-        { name: "דפי לזניה", category: "🥫 מזווה ויבשים" },
-        { name: "פתיתים אפויים כוכבים / אורז", category: "🥫 מזווה ויבשים" },
-        { name: "קוסקוס מהיר הכנה", category: "🥫 מזווה ויבשים" },
-        { name: "עדשים ירוקות", category: "🥫 מזווה ויבשים" },
-        { name: "עדשים אדומות", category: "🥫 מזווה ויבשים" },
-        { name: "גרגרי חומוס יבשים", category: "🥫 מזווה ויבשים" },
-        { name: "שעועית לבנה יבשה", category: "🥫 מזווה ויבשים" },
-        { name: "קינואה לבנה", category: "🥫 מזווה ויבשים" },
-        { name: "שיבולת שועל להכנה מהירה", category: "🥫 מזווה ויבשים" },
-        { name: "קורנפלקס תלבושת צהובה (אלופים)", category: "🥫 מזווה ויבשים" },
-        { name: "כריות שוקולד", category: "🥫 מזווה ויבשים" },
-        { name: "קוקו פאפס", category: "🥫 מזווה ויבשים" },
+        { name: "פתיתים אפויים", category: "🥫 מזווה ויבשים" },
         { name: "שמן זית כתית מעולה 750 מ\"ל", category: "🥫 מזווה ויבשים" },
-        { name: "שמן קנולה 1 ליטר", category: "🥫 מזווה ויבשים" },
-        { name: "שמן חמניות", category: "🥫 מזווה ויבשים" },
-        { name: "חומץ סינטטי 5%", category: "🥫 מזווה ויבשים" },
-        { name: "חומץ בלסמי", category: "🥫 מזווה ויבשים" },
-        { name: "רוטב סויה איכותי", category: "🥫 מזווה ויבשים" },
-        { name: "רוטב טריאקי", category: "🥫 מזווה ויבשים" },
-        { name: "רוטב צ'ילי מתוק", category: "🥫 מזווה ויבשים" },
-        { name: "רוטב צ'ילי חריף", category: "🥫 מזווה ויבשים" },
         { name: "קאטשופ היינץ", category: "🥫 מזווה ויבשים" },
-        { name: "מיונז היינץ / תלמה", category: "🥫 מזווה ויבשים" },
-        { name: "חרדל דיז'ון", category: "🥫 מזווה ויבשים" },
-        { name: "טחינה גולמית הנסיך / אל ארז", category: "🥫 מזווה ויבשים" },
-        { name: "רסק עגבניות 3 מארז", category: "🥫 מזווה ויבשים" },
-        { name: "עגבניות מרוסקות מארז", category: "🥫 מזווה ויבשים" },
-        { name: "רוטב לפסטה מוכן (פארמה רז)", category: "🥫 מזווה ויבשים" },
-        { name: "תירס שימורים מארז 3", category: "🥫 מזווה ויבשים" },
-        { name: "זיתים ירוקים מחולענים", category: "🥫 מזווה ויבשים" },
-        { name: "זיתים שחורים פרוסים", category: "🥫 מזווה ויבשים" },
-        { name: "מלפפונים חמוצים במלח", category: "🥫 מזווה ויבשים" },
-        { name: "מלפפונים חמוצים בחומץ", category: "🥫 מזווה ויבשים" },
+        { name: "מיונז היינץ", category: "🥫 מזווה ויבשים" },
         { name: "מלח שולחן דק", category: "🥫 מזווה ויבשים" },
-        { name: "מלח ים גס", category: "🥫 מזווה ויבשים" },
-        { name: "פלפל שחור טחון", category: "🥫 מזווה ויבשים" },
-        { name: "פלפל שחור גרוס", category: "🥫 מזווה ויבשים" },
-        { name: "פפריקה מתוקה בשמן", category: "🥫 מזווה ויבשים" },
-        { name: "פפריקה חריפה", category: "🥫 מזווה ויבשים" },
-        { name: "כמון טחון", category: "🥫 מזווה ויבשים" },
-        { name: "תבלין לעל האש / שווארמה", category: "🥫 מזווה ויבשים" },
-        { name: "אבקת מרק עוף", category: "🥫 מזווה ויבשים" },
-        { name: "אורגנו יבש", category: "🥫 מזווה ויבשים" },
         { name: "קמח חיטה לבן 1 ק\"ג", category: "🥫 מזווה ויבשים" },
-        { name: "קמח תפיח מאליו", category: "🥫 מזווה ויבשים" },
-        { name: "קמח כוסמין", category: "🥫 מזווה ויבשים" },
         { name: "סוכר לבן 1 ק\"ג", category: "🥫 מזווה ויבשים" },
-        { name: "סוכר חום כהה / דמררה", category: "🥫 מזווה ויבשים" },
-        { name: "אבקת סוכר", category: "🥫 מזווה ויבשים" },
-        { name: "אבקת אפייה / סודה לשתייה", category: "🥫 מזווה ויבשים" },
-        { name: "שמרים יבשים", category: "🥫 מזווה ויבשים" },
-        { name: "תמצית וניל איכותית", category: "🥫 מזווה ויבשים" },
-        { name: "שבבי שוקולד צ'יפס", category: "🥫 מזווה ויבשים" },
         { name: "קפה נמס עלית 200 גרם", category: "🥫 מזווה ויבשים" },
-        { name: "קפה ג'ייקובס קרונונג", category: "🥫 מזווה ויבשים" },
-        { name: "קפה שחור נח'לה / עלית עם הל", category: "🥫 מזווה ויבשים" },
-        { name: "קפסולות קפה נספרסו / עלית", category: "🥫 מזווה ויבשים" },
-        { name: "תה ויסוצקי קמומיל / ירוק", category: "🥫 מזווה ויבשים" },
-        { name: "תה ארל גריי", category: "🥫 מזווה ויבשים" },
-
-        // --- 🧼 ניקוי, פארם לבית וטואלטיקה ---
-        { name: "סבון כלים פיירי 650 מ\"ל", category: "🧼 ניקוי ובית" },
-        { name: "טבליות למדיח Finish / Somat", category: "🧼 ניקוי ובית" },
-        { name: "נוזל הברקה למדיח", category: "🧼 ניקוי ובית" },
-        { name: "מלח למדיח", category: "🧼 ניקוי ובית" },
-        { name: "נייר טואלט שמורת טבע 30 גלילים", category: "🧼 ניקוי ובית" },
-        { name: "מגבות נייר למטבח מארז 6", category: "🧼 ניקוי ובית" },
-        { name: "מגבונים לחים לתינוק / לבית", category: "🧼 ניקוי ובית" },
-        { name: "מגבוני חיטוי וניקוי כללי", category: "🧼 ניקוי ובית" },
-        { name: "אבקת כביסה אריאל / אריאל ג'ל", category: "🧼 ניקוי ובית" },
-        { name: "קפסולות לכביסה", category: "🧼 ניקוי ובית" },
-        { name: "מרכך כביסה בדין 4 ליטר", category: "🧼 ניקוי ובית" },
-        { name: "מסיר כתמים קאליה / ואניש", category: "🧼 ניקוי ובית" },
-        { name: "אקונומיקה סנו ז'אוול 4 ליטר", category: "🧼 ניקוי ובית" },
-        { name: "נוזל לרצפות סנו פוליוויקס", category: "🧼 ניקוי ובית" },
-        { name: "נוזל לניקוי חלונות וזכוכית", category: "🧼 ניקוי ובית" },
-        { name: "תרסיס לניקוי אבנית וחלודה", category: "🧼 ניקוי ובית" },
-        { name: "ספוגית הקסם 8 יח'", category: "🧼 ניקוי ובית" },
-        { name: "כריות צמר פלדה / סקוטש ברייט", category: "🧼 ניקוי ובית" },
-        { name: "שקיות אשפה ענקיות עם שרוך", category: "🧼 ניקוי ובית" },
-        { name: "שקיות אוכל / זיפלוק", category: "🧼 ניקוי ובית" },
-        { name: "נייר אפייה קלאסי 40 דפים", category: "🧼 ניקוי ובית" },
-        { name: "רדיד אלומיניום (נייר כסף)", category: "🧼 ניקוי ובית" },
-        { name: "ניילון נצמד עם חותך", category: "🧼 ניקוי ובית" },
-        { name: "תבניות אלומיניום חד פעמי", category: "🧼 ניקוי ובית" },
-        { name: "צלחות / כוסות חד פעמי", category: "🧼 ניקוי ובית" },
-        { name: "סבון גוף תחליב רחצה Dove / פינוק", category: "🧼 ניקוי ובית" },
-        { name: "שמפו Head & Shoulders", category: "🧼 ניקוי ובית" },
-        { name: "מרכך לשיער פינוק", category: "🧼 ניקוי ובית" },
-        { name: "משחת שיניים קולגייט", category: "🧼 ניקוי ובית" },
-        { name: "מברשת שיניים Soft / Medium", category: "🧼 ניקוי ובית" },
-        { name: "מי פה ליסטרין", category: "🧼 ניקוי ובית" },
-        { name: "דאודורנט סטיק / ספריי", category: "🧼 ניקוי ובית" },
-        { name: "סבון ידיים נוזלי משאבה", category: "🧼 ניקוי ובית" },
-        { name: "קיסמי אוזניים 300 יח'", category: "🧼 ניקוי ובית" }
+        { name: "קפה שחור עלית / נח'לה", category: "🥫 מזווה ויבשים" }
     ];
 
     let currentDate = new Date();
@@ -779,6 +633,7 @@
     let eventsData = [];
     let shoppingData = [];
     let templatesData = [];
+    let customProductsData = [];
 
     function formatDateKey(date) {
         const y = date.getFullYear();
@@ -787,8 +642,13 @@
         return `${y}-${m}-${d}`;
     }
 
+    function getFullProductCatalog() {
+        return [...builtInProducts, ...customProductsData];
+    }
+
     function detectCategory(productName) {
-        const match = supermarketDb.find(p => p.name === productName);
+        const catalog = getFullProductCatalog();
+        const match = catalog.find(p => p.name === productName);
         return match ? match.category : "📦 כללי / אחר";
     }
 
@@ -809,6 +669,11 @@
     onSnapshot(templatesQuery, (snapshot) => {
         templatesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         renderTemplatesSelect();
+    });
+
+    const customProductsQuery = query(collection(db, "custom_products"));
+    onSnapshot(customProductsQuery, (snapshot) => {
+        customProductsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     });
 
     // Calendar UI logic
@@ -848,14 +713,19 @@
 
             cell.onclick = () => {
                 selectedDateStr = cellDateKey;
-                document.getElementById('selected-date-title').innerText = `הוספת אירוע ל-${day} ב${monthNames[month]}`;
+                const formattedDateDisp = selectedDateStr.split('-').reverse().join('.');
+                document.getElementById('selected-date-title').innerText = `הוספת אירוע ל-${formattedDateDisp}`;
+                document.getElementById('events-for-day-title').innerText = `אירועים ב-${formattedDateDisp}`;
+                document.getElementById('event-start-date').value = selectedDateStr;
+                document.getElementById('event-end-date').value = selectedDateStr;
                 renderCalendar();
             };
 
             container.appendChild(cell);
         }
 
-        renderEvents();
+        renderEventsForSelectedDay();
+        renderAllEventsSorted();
     };
 
     window.changeMonth = function(delta) {
@@ -866,13 +736,30 @@
     window.addEvent = async function() {
         const input = document.getElementById('event-input');
         const text = input.value.trim();
+        const startDateVal = document.getElementById('event-start-date').value || selectedDateStr;
+        const endDateVal = document.getElementById('event-end-date').value || startDateVal;
+
         if (!text) return;
 
-        await addDoc(collection(db, "events"), {
-            text: text,
-            date: selectedDateStr,
-            createdAt: Date.now()
-        });
+        let start = new Date(startDateVal);
+        let end = new Date(endDateVal);
+
+        if (start > end) {
+            let temp = start;
+            start = end;
+            end = temp;
+        }
+
+        let curr = new Date(start);
+        while (curr <= end) {
+            const dateKey = formatDateKey(curr);
+            await addDoc(collection(db, "events"), {
+                text: text,
+                date: dateKey,
+                createdAt: Date.now()
+            });
+            curr.setDate(curr.getDate() + 1);
+        }
 
         input.value = '';
     };
@@ -881,19 +768,52 @@
         await deleteDoc(doc(db, "events", id));
     };
 
-    function renderEvents() {
-        const listContainer = document.getElementById('events-list');
+    function renderEventsForSelectedDay() {
+        const listContainer = document.getElementById('day-events-list');
         listContainer.innerHTML = '';
 
-        eventsData.forEach(e => {
+        const dayEvents = eventsData.filter(e => e.date === selectedDateStr);
+
+        if (dayEvents.length === 0) {
+            listContainer.innerHTML = '<li style="color: var(--text-muted); font-size: 14px;">אין אירועים ביום זה.</li>';
+            return;
+        }
+
+        dayEvents.forEach(e => {
+            const li = document.createElement('li');
+            li.className = 'item-row';
+            li.innerHTML = `
+                <div class="item-info">
+                    <strong>${e.text}</strong>
+                </div>
+                <button class="delete-btn" onclick="deleteEvent('${e.id}')">🗑️</button>
+            `;
+            listContainer.appendChild(li);
+        });
+    }
+
+    function renderAllEventsSorted() {
+        const listContainer = document.getElementById('all-events-list');
+        listContainer.innerHTML = '';
+
+        if (eventsData.length === 0) {
+            listContainer.innerHTML = '<li style="color: var(--text-muted); font-size: 14px;">אין אירועים שמורים.</li>';
+            return;
+        }
+
+        const sortedEvents = [...eventsData].sort((a, b) => a.date.localeCompare(b.date));
+
+        sortedEvents.forEach(e => {
             const li = document.createElement('li');
             li.className = 'item-row';
             const formattedDate = e.date ? e.date.split('-').reverse().join('.') : '';
             
             li.innerHTML = `
                 <div class="item-info">
-                    <strong>${e.text}</strong>
-                    <span class="item-date">${formattedDate}</span>
+                    <div>
+                        <strong>${e.text}</strong>
+                        <div class="item-date">${formattedDate}</div>
+                    </div>
                 </div>
                 <button class="delete-btn" onclick="deleteEvent('${e.id}')">🗑️</button>
             `;
@@ -905,14 +825,17 @@
     window.onProductInput = function() {
         const inputVal = document.getElementById('product-input').value.trim();
         const suggestionsBox = document.getElementById('suggestions');
+        const customCatBox = document.getElementById('custom-category-box');
         suggestionsBox.innerHTML = '';
 
         if (!inputVal) {
             suggestionsBox.style.display = 'none';
+            customCatBox.style.display = 'none';
             return;
         }
 
-        const matches = supermarketDb.filter(p => p.name.includes(inputVal));
+        const catalog = getFullProductCatalog();
+        const matches = catalog.filter(p => p.name.includes(inputVal));
 
         if (matches.length > 0) {
             matches.forEach(match => {
@@ -922,36 +845,60 @@
                 item.onclick = () => {
                     document.getElementById('product-input').value = match.name;
                     suggestionsBox.style.display = 'none';
+                    customCatBox.style.display = 'none';
                 };
                 suggestionsBox.appendChild(item);
             });
             suggestionsBox.style.display = 'block';
+
+            const exactMatch = catalog.some(p => p.name === inputVal);
+            customCatBox.style.display = exactMatch ? 'none' : 'block';
         } else {
             suggestionsBox.style.display = 'none';
+            customCatBox.style.display = 'block';
         }
     };
 
     window.addShoppingItem = async function() {
         const nameInput = document.getElementById('product-input');
         const qtyInput = document.getElementById('quantity-input');
+        const customCatSelect = document.getElementById('custom-category-select');
         
         const name = nameInput.value.trim();
         const qty = parseInt(qtyInput.value) || 1;
 
         if (!name) return;
 
-        const category = detectCategory(name);
+        const catalog = getFullProductCatalog();
+        let category = detectCategory(name);
+
+        if (!catalog.some(p => p.name === name)) {
+            category = customCatSelect.value;
+            await addDoc(collection(db, "custom_products"), {
+                name: name,
+                category: category,
+                createdAt: Date.now()
+            });
+        }
 
         await addDoc(collection(db, "shopping"), {
             name: name,
             quantity: qty,
             category: category,
+            completed: false,
             createdAt: Date.now()
         });
 
         nameInput.value = '';
         qtyInput.value = '1';
         document.getElementById('suggestions').style.display = 'none';
+        document.getElementById('custom-category-box').style.display = 'none';
+    };
+
+    window.toggleShoppingItem = async function(id, currentCompleted) {
+        await updateDoc(doc(db, "shopping", id), {
+            completed: !currentCompleted
+        });
     };
 
     window.deleteShoppingItem = async function(id) {
@@ -967,9 +914,10 @@
             return;
         }
 
-        // Grouping items by category
+        const sortedData = [...shoppingData].sort((a, b) => (a.completed === b.completed)? 0 : a.completed? 1 : -1);
+
         const groups = {};
-        shoppingData.forEach(item => {
+        sortedData.forEach(item => {
             const cat = item.category || detectCategory(item.name);
             if (!groups[cat]) groups[cat] = [];
             groups[cat].push(item);
@@ -986,11 +934,14 @@
 
             items.forEach(item => {
                 const li = document.createElement('li');
-                li.className = 'item-row';
+                li.className = `item-row ${item.completed ? 'completed' : ''}`;
                 li.innerHTML = `
                     <div class="item-info">
-                        <strong>${item.name}</strong>
-                        <span class="item-date">כמות: ${item.quantity}</span>
+                        <input type="checkbox" class="checkbox" ${item.completed ? 'checked' : ''} onclick="toggleShoppingItem('${item.id}', ${item.completed})">
+                        <div>
+                            <strong>${item.name}</strong>
+                            <div class="item-date">כמות: ${item.quantity}</div>
+                        </div>
                     </div>
                     <button class="delete-btn" onclick="deleteShoppingItem('${item.id}')">🗑️</button>
                 `;
@@ -1058,6 +1009,7 @@
                 name: item.name,
                 quantity: item.quantity,
                 category: item.category || detectCategory(item.name),
+                completed: false,
                 createdAt: Date.now()
             });
         }
@@ -1080,6 +1032,9 @@
         document.getElementById(tabId).classList.add('active');
         btn.classList.add('active');
     };
+
+    document.getElementById('event-start-date').value = selectedDateStr;
+    document.getElementById('event-end-date').value = selectedDateStr;
 
     // Initial Render
     renderCalendar();
