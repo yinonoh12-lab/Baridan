@@ -31,13 +31,87 @@
             padding-bottom: 90px;
         }
 
+        /* Lock Screen */
+        #lock-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--bg-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            padding: 20px;
+        }
+
+        .lock-card {
+            background-color: var(--card-bg);
+            border-radius: var(--border-radius);
+            padding: 30px 20px;
+            width: 100%;
+            max-width: 360px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+
+        .lock-icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+
+        .lock-card h2 {
+            color: var(--accent-color);
+            margin-bottom: 8px;
+        }
+
+        .lock-card p {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+        }
+
+        .pin-input {
+            width: 100%;
+            padding: 14px;
+            font-size: 20px;
+            text-align: center;
+            letter-spacing: 6px;
+            border: 1px solid #ddd;
+            border-radius: 12px;
+            background-color: var(--bg-color);
+            outline: none;
+            margin-bottom: 15px;
+        }
+
+        .btn-unlock {
+            width: 100%;
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .error-msg {
+            color: #e74c3c;
+            font-size: 13px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        /* App Container */
         .app-container {
             width: 100%;
             max-width: 480px;
             padding: 20px;
+            display: none; /* hidden until unlocked */
         }
 
-        /* Header */
         header {
             display: flex;
             justify-content: space-between;
@@ -51,6 +125,12 @@
             color: var(--accent-color);
         }
 
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
         .user-badge {
             background-color: var(--card-bg);
             padding: 8px 16px;
@@ -59,7 +139,16 @@
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
 
-        /* Cards */
+        .lock-btn {
+            background: var(--card-bg);
+            border: none;
+            padding: 8px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
         .card {
             background-color: var(--card-bg);
             border-radius: var(--border-radius);
@@ -68,7 +157,6 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.03);
         }
 
-        /* Calendar Styling */
         .calendar-header {
             display: flex;
             justify-content: space-between;
@@ -146,7 +234,6 @@
             background-color: #fff;
         }
 
-        /* Input Controls */
         .add-box {
             display: flex;
             flex-direction: column;
@@ -199,7 +286,6 @@
             font-size: 14px;
         }
 
-        /* Lists & Categories */
         .section-title {
             font-size: 16px;
             font-weight: 700;
@@ -264,7 +350,6 @@
             font-size: 16px;
         }
 
-        /* Autocomplete Suggestions */
         .suggestions-box {
             position: absolute;
             top: 100%;
@@ -298,7 +383,6 @@
             color: var(--text-muted);
         }
 
-        /* Bottom Navigation */
         .bottom-nav {
             position: fixed;
             bottom: 0;
@@ -313,6 +397,7 @@
             border-top-right-radius: 20px;
             max-width: 480px;
             margin: 0 auto;
+            display: none; /* hidden until unlocked */
         }
 
         .nav-item {
@@ -347,9 +432,25 @@
 </head>
 <body>
 
-<div class="app-container">
+<!-- Lock Screen -->
+<div id="lock-screen">
+    <div class="lock-card">
+        <div class="lock-icon">🔒</div>
+        <h2>בר ועידן</h2>
+        <p>אפליקציה מאובטחת. הקלד קוד גישה:</p>
+        <input type="password" id="pin-code-input" class="pin-input" maxlength="4" placeholder="••••" autocomplete="off" onkeyup="if(event.key==='Enter') checkPin()">
+        <button class="btn-unlock" onclick="checkPin()">כניסה</button>
+        <div id="lock-error-msg" class="error-msg">קוד גישה שגוי, נסה שוב.</div>
+    </div>
+</div>
+
+<!-- Main Application -->
+<div class="app-container" id="main-app">
     <header>
-        <div class="user-badge">בר ועידן</div>
+        <div class="header-actions">
+            <div class="user-badge">בר ועידן</div>
+            <button class="lock-btn" onclick="lockApp()" title="נעילה">🔒</button>
+        </div>
         <h1>הבית שלנו</h1>
     </header>
 
@@ -381,13 +482,11 @@
             </div>
         </div>
 
-        <!-- אירועים ביום שנבחר -->
         <div class="card">
             <div class="section-title" id="events-for-day-title">אירועים ביום שנבחר</div>
             <ul class="item-list" id="day-events-list"></ul>
         </div>
 
-        <!-- כל האירועים מסודרים מהקרוב לרחוק -->
         <div class="card">
             <div class="section-title">כל האירועים הקרובים (מהקרוב לרחוק)</div>
             <ul class="item-list" id="all-events-list"></ul>
@@ -396,7 +495,6 @@
 
     <!-- בלשונית: רשימת קניות -->
     <div id="shopping-tab" class="tab-content">
-        <!-- ניהול רשימות שמורות -->
         <div class="card">
             <div class="section-title">רשימות שמורות באחסון</div>
             <div style="display: flex; gap: 8px; margin-bottom: 10px;">
@@ -412,7 +510,6 @@
             </div>
         </div>
 
-        <!-- הוספת מוצר -->
         <div class="card">
             <div class="section-title">הוספת מוצר לסל</div>
             <div class="add-box">
@@ -424,7 +521,6 @@
                     <input type="number" id="quantity-input" value="1" min="1" style="width: 65px; text-align: center;">
                 </div>
 
-                <!-- בחירת קטגוריה במידה והמוצר חדש -->
                 <div id="custom-category-box" style="display: none;">
                     <label style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px; display: block;">מוצר חדש? בחר קטגוריה למאגר:</label>
                     <select id="custom-category-select">
@@ -447,7 +543,6 @@
             </div>
         </div>
 
-        <!-- הצגת הרשימה כצ'ק-ליסט -->
         <div class="card">
             <div class="section-title">רשימת קניות (צ'ק-ליסט)</div>
             <div id="shopping-list-grouped"></div>
@@ -455,8 +550,7 @@
     </div>
 </div>
 
-<!-- ניווט תחתון -->
-<nav class="bottom-nav">
+<nav class="bottom-nav" id="bottom-bar">
     <button class="nav-item active" onclick="switchTab('calendar-tab', this)">
         <span class="nav-icon">📅</span>
         <span>אירועים</span>
@@ -467,7 +561,6 @@
     </button>
 </nav>
 
-<!-- Firebase SDK Modules -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getFirestore, collection, addDoc, deleteDoc, doc, updateDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
@@ -485,147 +578,90 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // מאגר מובנה רחב
+    // Security Pin Lock Logic
+    window.checkPin = function() {
+        const pinInput = document.getElementById('pin-code-input').value;
+        const errorMsg = document.getElementById('lock-error-msg');
+
+        if (pinInput === "1205") {
+            sessionStorage.setItem('baridan_unlocked', 'true');
+            showApp();
+        } else {
+            errorMsg.style.display = 'block';
+            document.getElementById('pin-code-input').value = '';
+        }
+    };
+
+    window.lockApp = function() {
+        sessionStorage.removeItem('baridan_unlocked');
+        document.getElementById('lock-screen').style.display = 'flex';
+        document.getElementById('main-app').style.display = 'none';
+        document.getElementById('bottom-bar').style.display = 'none';
+        document.getElementById('pin-code-input').value = '';
+        document.getElementById('lock-error-msg').style.display = 'none';
+    };
+
+    function showApp() {
+        document.getElementById('lock-screen').style.display = 'none';
+        document.getElementById('main-app').style.display = 'block';
+        document.getElementById('bottom-bar').style.display = 'flex';
+        renderCalendar();
+    }
+
+    // Auto Unlock check on load
+    if (sessionStorage.getItem('baridan_unlocked') === 'true') {
+        showApp();
+    }
+
     const builtInProducts = [
-        // --- 🧼 סנו, ניקוי, כביסה ובית ---
         { name: "סנו ז'אוול אקונומיקה 4 ליטר", category: "🧼 ניקוי ובית" },
         { name: "סנו ז'אוול ג'ל ניקוי", category: "🧼 ניקוי ובית" },
         { name: "סנו פוליוויקס לרצפות", category: "🧼 ניקוי ובית" },
         { name: "סנו אווקס לרצפות עץ/פרקט", category: "🧼 ניקוי ובית" },
         { name: "סנו רהיטים ספריי לטיפוח", category: "🧼 ניקוי ובית" },
         { name: "סנובון אסלה 5 פעולות", category: "🧼 ניקוי ובית" },
-        { name: "סנובון ג'ל לאסלה", category: "🧼 ניקוי ובית" },
         { name: "סנו קלער לניקוי חלונות", category: "🧼 ניקוי ובית" },
         { name: "סנו אנטי קאלק לאבנית", category: "🧼 ניקוי ובית" },
         { name: "סנו ספארק נוזל כלים", category: "🧼 ניקוי ובית" },
         { name: "סנו מקסימה מרכך כביסה", category: "🧼 ניקוי ובית" },
         { name: "סנו מקסימה אבקת כביסה", category: "🧼 ניקוי ובית" },
         { name: "סנו מקסימה ג'ל כביסה", category: "🧼 ניקוי ובית" },
-        { name: "סנו אויר מטהר אוויר", category: "🧼 ניקוי ובית" },
-        { name: "סנו פורטה מסיר שומנים", category: "🧼 ניקוי ובית" },
-        { name: "סנו מטליות לחות לרצפה", category: "🧼 ניקוי ובית" },
-        { name: "סנו מטליות לחות לחיטוי כללי", category: "🧼 ניקוי ובית" },
-        { name: "סנו K300 לקטילת חרקים", category: "🧼 ניקוי ובית" },
-        { name: "סנו K2000 לחרקים זוחלים", category: "🧼 ניקוי ובית" },
         { name: "סבון כלים פיירי 650 מ\"ל", category: "🧼 ניקוי ובית" },
         { name: "טבליות למדיח Finish All in 1", category: "🧼 ניקוי ובית" },
         { name: "נייר טואלט שמורת טבע 30 גלילים", category: "🧼 ניקוי ובית" },
         { name: "מגבות נייר למטבח מארז 6", category: "🧼 ניקוי ובית" },
         { name: "שקיות אשפה ענקיות עם שרוך", category: "🧼 ניקוי ובית" },
-        { name: "ניילון נצמד עם חותך", category: "🧼 ניקוי ובית" },
-        { name: "נייר אפייה קלאסי", category: "🧼 ניקוי ובית" },
-        { name: "רדיד אלומיניום (נייר כסף)", category: "🧼 ניקוי ובית" },
-
-        // --- 🍫 חטיפים, מתוקים ועוגיות ---
         { name: "במבה 80 גרם", category: "🍫 חטיפים ומתוקים" },
-        { name: "במבה ממולאת נוטלה / קרם נוגט", category: "🍫 חטיפים ומתוקים" },
         { name: "ביסלי בצל", category: "🍫 חטיפים ומתוקים" },
         { name: "ביסלי ברביקיו", category: "🍫 חטיפים ומתוקים" },
         { name: "ביסלי גריל", category: "🍫 חטיפים ומתוקים" },
-        { name: "ביסלי פלאפל", category: "🍫 חטיפים ומתוקים" },
         { name: "תפוצ'יפס טבעי", category: "🍫 חטיפים ומתוקים" },
-        { name: "תפוצ'יפס שמנת בצל", category: "🍫 חטיפים ומתוקים" },
-        { name: "תפוצ'יפס מקסיקני", category: "🍫 חטיפים ומתוקים" },
         { name: "דוריטוס חמוץ חריף", category: "🍫 חטיפים ומתוקים" },
-        { name: "דוריטוס נאצ'ו", category: "🍫 חטיפים ומתוקים" },
         { name: "פרינגלס קלאסי", category: "🍫 חטיפים ומתוקים" },
-        { name: "פרינגלס שמנת בצל", category: "🍫 חטיפים ומתוקים" },
-        { name: "פופקורן למיקרוגל", category: "🍫 חטיפים ומתוקים" },
-        { name: "אפרופו", category: "🍫 חטיפים ומתוקים" },
-        { name: "בייגלה שמיניות", category: "🍫 חטיפים ומתוקים" },
-        { name: "בייגלה שטוחים", category: "🍫 חטיפים ומתוקים" },
-        { name: "מילקה שוקולד חלב", category: "🍫 חטיפים ומתוקים" },
-        { name: "שוקולד פרה חלב", category: "🍫 חטיפים ומתוקים" },
         { name: "קינדר בואנו", category: "🍫 חטיפים ומתוקים" },
-        { name: "קינדר ג'וי", category: "🍫 חטיפים ומתוקים" },
         { name: "נוטלה 350 גרם", category: "🍫 חטיפים ומתוקים" },
-        { name: "ממרח השחר העולה", category: "🍫 חטיפים ומתוקים" },
-        { name: "עוגיות אוראו", category: "🍫 חטיפים ומתוקים" },
-        { name: "עוגיות לוטוס", category: "🍫 חטיפים ומתוקים" },
-
-        // --- 🍷 שתייה חריפה ואלכוהול ---
         { name: "בירה גולדסטאר 6 יח'", category: "🍷 שתייה חריפה ואלכוהול" },
         { name: "בירה הייניקן 6 יח'", category: "🍷 שתייה חריפה ואלכוהול" },
-        { name: "בירה קורונה 4 יח'", category: "🍷 שתייה חריפה ואלכוהול" },
         { name: "וודקה פינלנדיה 1 ליטר", category: "🍷 שתייה חריפה ואלכוהול" },
-        { name: "וודקה אבסולוט 1 ליטר", category: "🍷 שתייה חריפה ואלכוהול" },
-        { name: "וודקה וואן גוך אקזוטי", category: "🍷 שתייה חריפה ואלכוהול" },
-        { name: "וויסקי ג'ק דניאלס 1 ליטר", category: "🍷 שתייה חריפה ואלכוהול" },
-        { name: "וויסקי ג'וני ווקר בלאק לייבל", category: "🍷 שתייה חריפה ואלכוהול" },
         { name: "ערק איילות", category: "🍷 שתייה חריפה ואלכוהול" },
-        { name: "ערק עלית 700 מ\"ל", category: "🍷 שתייה חריפה ואלכוהול" },
-        { name: "יין אדום קברנה סוביניון הרי גליל", category: "🍷 שתייה חריפה ואלכוהול" },
-
-        // --- 🥤 שתייה קלה ---
         { name: "קוקה קולה 1.5 ליטר", category: "🥤 שתייה קלה ומשקאות" },
         { name: "קוקה קולה זירו 1.5 ליטר", category: "🥤 שתייה קלה ומשקאות" },
-        { name: "ספרייט 1.5 ליטר", category: "🥤 שתייה קלה ומשקאות" },
         { name: "ספרייט זירו 1.5 ליטר", category: "🥤 שתייה קלה ומשקאות" },
-        { name: "פנטה תפוזים 1.5 ליטר", category: "🥤 שתייה קלה ומשקאות" },
-        { name: "פיוז טי אפרסק 1.5 ליטר", category: "🥤 שתייה קלה ומשקאות" },
-        { name: "שישיית מים מינרליים נביעות", category: "🥤 שתייה קלה ומשקאות" },
-        { name: "שישיית מים מינרליים מי עדן", category: "🥤 שתייה קלה ומשקאות" },
-
-        // --- 🥛 מוצרי חלב וטבעונות ---
         { name: "חלב 3% קרטון", category: "🥛 מוצרי חלב וטבעונות" },
         { name: "חלב 1% קרטון", category: "🥛 מוצרי חלב וטבעונות" },
-        { name: "חלב ללא לקטוז", category: "🥛 מוצרי חלב וטבעונות" },
-        { name: "חלב שיבולת שועל אלפרו", category: "🥛 מוצרי חלב וטבעונות" },
-        { name: "חמאה תנובה 100 גרם", category: "🥛 מוצרי חלב וטבעונות" },
         { name: "גבינה צהובה עמק 28%", category: "🥛 מוצרי חלב וטבעונות" },
-        { name: "גבינה לבנה 5% תנובה", category: "🥛 מוצרי חלב וטבעונות" },
         { name: "קוטג' 5% תנובה", category: "🥛 מוצרי חלב וטבעונות" },
         { name: "ביצים L תבנית 12", category: "🥛 מוצרי חלב וטבעונות" },
-        { name: "ביצים XL תבנית 12", category: "🥛 מוצרי חלב וטבעונות" },
-
-        // --- 🥦 ירקות ופירות ---
         { name: "עגבניות", category: "🥦 ירקות ופירות" },
-        { name: "עגבניות שרי", category: "🥦 ירקות ופירות" },
         { name: "מלפפונים", category: "🥦 ירקות ופירות" },
         { name: "בצל צהוב", category: "🥦 ירקות ופירות" },
-        { name: "בצל סגול", category: "🥦 ירקות ופירות" },
         { name: "תפוחי אדמה לבן", category: "🥦 ירקות ופירות" },
-        { name: "בטטה", category: "🥦 ירקות ופירות" },
-        { name: "גזר ארוז", category: "🥦 ירקות ופירות" },
-        { name: "פלפל אדום", category: "🥦 ירקות ופירות" },
-        { name: "אבוקדו", category: "🥦 ירקות ופירות" },
-        { name: "בננות", category: "🥦 ירקות ופירות" },
-        { name: "לימון", category: "🥦 ירקות ופירות" },
-
-        // --- 🍞 לחם, מאפים וסלטים ---
         { name: "לחם אחיד פרוס", category: "🍞 לחם ומאפים" },
-        { name: "לחם מחמצת כפרי", category: "🍞 לחם ומאפים" },
         { name: "פיתות אריזה של 10", category: "🍞 לחם ומאפים" },
-        { name: "לחמניות המבורגר 4 יח'", category: "🍞 לחם ומאפים" },
-        { name: "חלה לשבת", category: "🍞 לחם ומאפים" },
-        { name: "חומוס אחלה 500 גרם", category: "🍞 לחם ומאפים" },
-
-        // --- 🥩 בשר, עוף ודגים ---
         { name: "חזה עוף טרי", category: "🥩 בשר, עוף ודגים" },
-        { name: "כרעיים עוף טרי", category: "🥩 בשר, עוף ודגים" },
         { name: "בשר טחון טרי (בקר)", category: "🥩 בשר, עוף ודגים" },
-        { name: "סטייק אנטריקוט טרי", category: "🥩 בשר, עוף ודגים" },
-        { name: "פילה סלמון טרי", category: "🥩 בשר, עוף ודגים" },
-        { name: "טונה בשמן מארז 4 יח'", category: "🥩 בשר, עוף ודגים" },
-
-        // --- 🧊 קפואים ---
-        { name: "שניצל מאמא עוף חזה עוף", category: "🧊 קפואים" },
-        { name: "שניצל תירס טבעול", category: "🧊 קפואים" },
-        { name: "צ'יפס קפוא לתנור", category: "🧊 קפואים" },
-        { name: "פיצה קפואה מעדנות", category: "🧊 קפואים" },
-
-        // --- 🥫 מזווה, שימורים ותבלינים ---
         { name: "אורז פרסי קלאסי 1 ק\"ג", category: "🥫 מזווה ויבשים" },
-        { name: "פסטה ספגטי מס' 5", category: "🥫 מזווה ויבשים" },
-        { name: "פתיתים אפויים", category: "🥫 מזווה ויבשים" },
-        { name: "שמן זית כתית מעולה 750 מ\"ל", category: "🥫 מזווה ויבשים" },
-        { name: "קאטשופ היינץ", category: "🥫 מזווה ויבשים" },
-        { name: "מיונז היינץ", category: "🥫 מזווה ויבשים" },
-        { name: "מלח שולחן דק", category: "🥫 מזווה ויבשים" },
-        { name: "קמח חיטה לבן 1 ק\"ג", category: "🥫 מזווה ויבשים" },
-        { name: "סוכר לבן 1 ק\"ג", category: "🥫 מזווה ויבשים" },
-        { name: "קפה נמס עלית 200 גרם", category: "🥫 מזווה ויבשים" },
-        { name: "קפה שחור עלית / נח'לה", category: "🥫 מזווה ויבשים" }
+        { name: "קאטשופ היינץ", category: "🥫 מזווה ויבשים" }
     ];
 
     let currentDate = new Date();
@@ -652,7 +688,6 @@
         return match ? match.category : "📦 כללי / אחר";
     }
 
-    // Realtime listeners for Firestore
     const eventsQuery = query(collection(db, "events"), orderBy("date", "asc"));
     onSnapshot(eventsQuery, (snapshot) => {
         eventsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -676,7 +711,6 @@
         customProductsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     });
 
-    // Calendar UI logic
     window.renderCalendar = function() {
         const year = currentDate.getFullYear();
         const month = currentDate.getMonth();
@@ -821,7 +855,6 @@
         });
     }
 
-    // Autocomplete Logic
     window.onProductInput = function() {
         const inputVal = document.getElementById('product-input').value.trim();
         const suggestionsBox = document.getElementById('suggestions');
@@ -869,30 +902,35 @@
 
         if (!name) return;
 
-        const catalog = getFullProductCatalog();
-        let category = detectCategory(name);
+        try {
+            const catalog = getFullProductCatalog();
+            let category = detectCategory(name);
 
-        if (!catalog.some(p => p.name === name)) {
-            category = customCatSelect.value;
-            await addDoc(collection(db, "custom_products"), {
+            if (!catalog.some(p => p.name === name)) {
+                category = customCatSelect.value;
+                await addDoc(collection(db, "custom_products"), {
+                    name: name,
+                    category: category,
+                    createdAt: Date.now()
+                });
+            }
+
+            await addDoc(collection(db, "shopping"), {
                 name: name,
+                quantity: qty,
                 category: category,
+                completed: false,
                 createdAt: Date.now()
             });
+
+            nameInput.value = '';
+            qtyInput.value = '1';
+            document.getElementById('suggestions').style.display = 'none';
+            document.getElementById('custom-category-box').style.display = 'none';
+        } catch (err) {
+            console.error("Firebase Add Error: ", err);
+            alert("ארעה שגיאה בשמירה.");
         }
-
-        await addDoc(collection(db, "shopping"), {
-            name: name,
-            quantity: qty,
-            category: category,
-            completed: false,
-            createdAt: Date.now()
-        });
-
-        nameInput.value = '';
-        qtyInput.value = '1';
-        document.getElementById('suggestions').style.display = 'none';
-        document.getElementById('custom-category-box').style.display = 'none';
     };
 
     window.toggleShoppingItem = async function(id, currentCompleted) {
@@ -952,7 +990,6 @@
         }
     }
 
-    // Presets / Storage Logic
     window.saveCurrentListAsTemplate = async function() {
         const input = document.getElementById('template-name-input');
         const name = input.value.trim();
@@ -1035,9 +1072,6 @@
 
     document.getElementById('event-start-date').value = selectedDateStr;
     document.getElementById('event-end-date').value = selectedDateStr;
-
-    // Initial Render
-    renderCalendar();
 </script>
 </body>
 </html>
