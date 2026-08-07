@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>בר ועידן</title>
+    <style>
+        :root {
+            --bg-color: #f7f4ed;
+            --card-bg: #ffffff;
+            --accent-color: #1a2b3c;
+            --accent-light: #ece7de;
+            --text-color: #2c3e50;
+            --text-muted: #7f8c8d;
+            --border-radius: 20px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Hebrew, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+            padding-bottom: 90px;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 480px;
+            padding: 20px;
+        }
+
+        /* Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--accent-color);
+        }
+
+        .user-badge {
+            background-color: var(--card-bg);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        /* Cards */
+        .card {
+            background-color: var(--card-bg);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        }
+
+        /* Calendar Styling */
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .calendar-header h2 {
+            font-size: 18px;
+            color: var(--accent-color);
+        }
+
+        .nav-btn {
+            background: var(--accent-light);
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            color: var(--accent-color);
+        }
+
+        .weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            text-align: center;
+            font-weight: bold;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .days-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 6px;
+        }
+
+        .day-cell {
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--accent-light);
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            position: relative;
+            font-size: 14px;
+        }
+
+        .day-cell.empty {
+            background-color: transparent;
+            cursor: default;
+        }
+
+        .day-cell.selected {
+            background-color: var(--accent-color);
+            color: #fff;
+        }
+
+        .day-cell.has-event::after {
+            content: '';
+            width: 5px;
+            height: 5px;
+            background-color: #e74c3c;
+            border-radius: 50%;
+            position: absolute;
+            bottom: 4px;
+        }
+
+        .day-cell.selected.has-event::after {
+            background-color: #fff;
+        }
+
+        /* Input Controls */
+        .add-box {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            position: relative;
+        }
+
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            background-color: var(--bg-color);
+            outline: none;
+            font-size: 15px;
+        }
+
+        .btn-add {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            width: 48px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        /* Lists */
+        .section-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: var(--accent-color);
+        }
+
+        .item-list {
+            list-style: none;
+        }
+
+        .item-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background-color: var(--bg-color);
+            border-radius: 12px;
+            margin-bottom: 8px;
+        }
+
+        .item-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .item-date {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .delete-btn {
+            background: none;
+            border: none;
+            color: #e74c3c;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        /* Autocomplete Suggestions */
+        .suggestions-box {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            left: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 12px;
+            max-height: 150px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            margin-top: 4px;
+        }
+
+        .suggestion-item {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+        }
+
+        .suggestion-item:hover {
+            background-color: var(--accent-light);
+        }
+
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: var(--card-bg);
+            display: flex;
+            justify-content: space-around;
+            padding: 12px 0;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+            border-top-left-radius: 20px;
+            border-top-right-radius: 20px;
+            max-width: 480px;
+            margin: 0 auto;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 12px;
+            gap: 4px;
+        }
+
+        .nav-item.active {
+            color: var(--accent-color);
+            font-weight: bold;
+        }
+
+        .nav-icon {
+            font-size: 20px;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <header>
+        <div class="user-badge">בר ועידן</div>
+        <h1>הבית שלנו</h1>
+    </header>
+
+    <!-- בלשונית: לוח שנה -->
+    <div id="calendar-tab" class="tab-content active">
+        <div class="card">
+            <div class="calendar-header">
+                <button class="nav-btn" onclick="changeMonth(-1)">&gt;</button>
+                <h2 id="month-year-display"></h2>
+                <button class="nav-btn" onclick="changeMonth(1)">&lt;</button>
+            </div>
+            <div class="weekdays">
+                <div>א'</div><div>ב'</div><div>ג'</div><div>ד'</div><div>ה'</div><div>ו'</div><div>ש'</div>
+            </div>
+            <div class="days-grid" id="days-container"></div>
+        </div>
+
+        <div class="card">
+            <div class="section-title" id="selected-date-title">הוספת אירוע</div>
+            <div class="add-box">
+                <input type="text" id="event-input" placeholder="למשל: יום הולדת, ארוחה...">
+                <button class="btn-add" onclick="addEvent()">+</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="section-title">אירועים קרובים</div>
+            <ul class="item-list" id="events-list"></ul>
+        </div>
+    </div>
+
+    <!-- בלשונית: רשימת קניות -->
+    <div id="shopping-tab" class="tab-content">
+        <div class="card">
+            <div class="section-title">הוספת מוצר לסל</div>
+            <div class="add-box">
+                <div style="flex-grow: 1; position: relative;">
+                    <input type="text" id="product-input" placeholder="הקלד שם מוצר (למשל: חלב)..." oninput="onProductInput()" autocomplete="off">
+                    <div id="suggestions" class="suggestions-box" style="display: none;"></div>
+                </div>
+                <input type="number" id="quantity-input" value="1" min="1" style="width: 70px; text-align: center;">
+                <button class="btn-add" onclick="addShoppingItem()">+</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="section-title">רשימת קניות</div>
+            <ul class="item-list" id="shopping-list"></ul>
+        </div>
+    </div>
+</div>
+
+<!-- ניווט תחתון -->
+<nav class="bottom-nav">
+    <button class="nav-item active" onclick="switchTab('calendar-tab', this)">
+        <span class="nav-icon">📅</span>
+        <span>אירועים</span>
+    </button>
+    <button class="nav-item" onclick="switchTab('shopping-tab', this)">
+        <span class="nav-icon">🛒</span>
+        <span>קניות</span>
+    </button>
+</nav>
+
+<!-- Firebase SDK Modules -->
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyD4Jk8Wr-kXiP9yE76vvFCiUbzw6ddQXSI",
+      authDomain: "baridan-95b15.firebaseapp.com",
+      projectId: "baridan-95b15",
+      storageBucket: "baridan-95b15.firebasestorage.app",
+      messagingSenderId: "138438968155",
+      appId: "1:138438968155:web:7645df69852d727f61107e",
+      measurementId: "G-W3LGGC211P"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // Supermarket database
+    const supermarketProducts = [
+        "חלב 3%", "חלב 1%", "חלב שיבולת שועל", "חלב שקדים", "חלב סויה", "חלב ללא לקטוז",
+        "חמאה", "שמנת חמוצה", "שמנת מתוקה", "גבינה צהובה", "גבינה לבנה 5%", "קוטג'",
+        "גבינת בולגרית", "גבינת פטה", "גבינת נפוליאון", "מעדן יולו", "מילקי", "יוגורט דנונה",
+        "לחם פרוס", "לחם מחמצת", "לחם כוסמין", "פיתות", "לחמניות", "חלה", "טורטיות",
+        "ביצים L", "ביצים XL", "עגבניות", "מלפפונים", "בצל צהוב", "בצל ירוק", "בצל סגול",
+        "תפוחי אדמה", "גזר", "פלפל אדום", "פלפל צהוב", "קישואים", "חצילים", "שום",
+        "חסה", "כוסברה", "פטרוזיליה", "נענע", "תפוחי עץ", "בננות", "ענבים", "אבטיח",
+        "לימון", "תפוזים", "חזה עוף", "כרעיים עוף", "בשר טחון", "סטייק אנטריקוט",
+        "דג סלמון טרי", "טונה מקופסה", "אורז פרסי", "אורז בסמטי", "פסטה פוזילי",
+        "ספגטי", "פתיתים", "קוסקוס", "שמן זית", "שמן קנולה", "מלח", "פלפל שחור",
+        "סוכר", "קפה שחור", "קפה נמס", "תה קמומיל", "רסק עגבניות", "קאטשופ", "מיונז",
+        "חרדל", "טחינה גולמית", "חומוס", "סבון כלים", "טבליות למדיח", "נייר טואלט",
+        "מגבוני ניקוי", "אבקת כביסה", "מרכך כביסה", "שקיות אשפה"
+    ];
+
+    let currentDate = new Date();
+    let selectedDateStr = formatDateKey(new Date());
+    let eventsData = [];
+    let shoppingData = [];
+
+    function formatDateKey(date) {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    }
+
+    // Realtime listeners for Firestore
+    const eventsQuery = query(collection(db, "events"), orderBy("date", "asc"));
+    onSnapshot(eventsQuery, (snapshot) => {
+        eventsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        renderCalendar();
+    });
+
+    const shoppingQuery = query(collection(db, "shopping"));
+    onSnapshot(shoppingQuery, (snapshot) => {
+        shoppingData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        renderShoppingList();
+    });
+
+    // Calendar UI logic
+    window.renderCalendar = function() {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        
+        const monthNames = ["ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני", "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר"];
+        document.getElementById('month-year-display').innerText = `${monthNames[month]} ${year}`;
+
+        const firstDay = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+        const container = document.getElementById('days-container');
+        container.innerHTML = '';
+
+        for (let i = 0; i < firstDay; i++) {
+            const emptyCell = document.createElement('div');
+            emptyCell.className = 'day-cell empty';
+            container.appendChild(emptyCell);
+        }
+
+        for (let day = 1; day <= daysInMonth; day++) {
+            const cell = document.createElement('div');
+            cell.className = 'day-cell';
+            cell.innerText = day;
+            
+            const cellDateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            
+            if (cellDateKey === selectedDateStr) {
+                cell.classList.add('selected');
+            }
+
+            if (eventsData.some(e => e.date === cellDateKey)) {
+                cell.classList.add('has-event');
+            }
+
+            cell.onclick = () => {
+                selectedDateStr = cellDateKey;
+                document.getElementById('selected-date-title').innerText = `הוספת אירוע ל-${day} ב${monthNames[month]}`;
+                renderCalendar();
+            };
+
+            container.appendChild(cell);
+        }
+
+        renderEvents();
+    };
+
+    window.changeMonth = function(delta) {
+        currentDate.setMonth(currentDate.getMonth() + delta);
+        renderCalendar();
+    };
+
+    window.addEvent = async function() {
+        const input = document.getElementById('event-input');
+        const text = input.value.trim();
+        if (!text) return;
+
+        await addDoc(collection(db, "events"), {
+            text: text,
+            date: selectedDateStr,
+            createdAt: Date.now()
+        });
+
+        input.value = '';
+    };
+
+    window.deleteEvent = async function(id) {
+        await deleteDoc(doc(db, "events", id));
+    };
+
+    function renderEvents() {
+        const listContainer = document.getElementById('events-list');
+        listContainer.innerHTML = '';
+
+        eventsData.forEach(e => {
+            const li = document.createElement('li');
+            li.className = 'item-row';
+            const formattedDate = e.date ? e.date.split('-').reverse().join('.') : '';
+            
+            li.innerHTML = `
+                <div class="item-info">
+                    <strong>${e.text}</strong>
+                    <span class="item-date">${formattedDate}</span>
+                </div>
+                <button class="delete-btn" onclick="deleteEvent('${e.id}')">🗑️</button>
+            `;
+            listContainer.appendChild(li);
+        });
+    }
+
+    // Shopping List Logic
+    window.onProductInput = function() {
+        const inputVal = document.getElementById('product-input').value.trim();
+        const suggestionsBox = document.getElementById('suggestions');
+        suggestionsBox.innerHTML = '';
+
+        if (!inputVal) {
+            suggestionsBox.style.display = 'none';
+            return;
+        }
+
+        const matches = supermarketProducts.filter(p => p.includes(inputVal));
+
+        if (matches.length > 0) {
+            matches.forEach(match => {
+                const item = document.createElement('div');
+                item.className = 'suggestion-item';
+                item.innerText = match;
+                item.onclick = () => {
+                    document.getElementById('product-input').value = match;
+                    suggestionsBox.style.display = 'none';
+                };
+                suggestionsBox.appendChild(item);
+            });
+            suggestionsBox.style.display = 'block';
+        } else {
+            suggestionsBox.style.display = 'none';
+        }
+    };
+
+    window.addShoppingItem = async function() {
+        const nameInput = document.getElementById('product-input');
+        const qtyInput = document.getElementById('quantity-input');
+        
+        const name = nameInput.value.trim();
+        const qty = parseInt(qtyInput.value) || 1;
+
+        if (!name) return;
+
+        await addDoc(collection(db, "shopping"), {
+            name: name,
+            quantity: qty,
+            createdAt: Date.now()
+        });
+
+        nameInput.value = '';
+        qtyInput.value = '1';
+        document.getElementById('suggestions').style.display = 'none';
+    };
+
+    window.deleteShoppingItem = async function(id) {
+        await deleteDoc(doc(db, "shopping", id));
+    };
+
+    function renderShoppingList() {
+        const listContainer = document.getElementById('shopping-list');
+        listContainer.innerHTML = '';
+
+        shoppingData.forEach(item => {
+            const li = document.createElement('li');
+            li.className = 'item-row';
+            li.innerHTML = `
+                <div class="item-info">
+                    <strong>${item.name}</strong>
+                    <span class="item-date">כמות: ${item.quantity}</span>
+                </div>
+                <button class="delete-btn" onclick="deleteShoppingItem('${item.id}')">🗑️</button>
+            `;
+            listContainer.appendChild(li);
+        });
+    }
+
+    window.switchTab = function(tabId, btn) {
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        btn.classList.add('active');
+    };
+
+    // Initial Render
+    renderCalendar();
+</script>
+</body>
+</html>
